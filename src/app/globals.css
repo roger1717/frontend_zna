@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Paleta tomada 1:1 del diseño zonapp-pwa (index.html) — no inventar
+   colores nuevos, todo sale de las variables --verde/--ambar/etc. del
+   prototipo original. */
+@theme {
+  --color-verde: #1d4e3a;
+  --color-verde-suave: #2a6b50;
+  --color-verde-claro: #eaf3ee;
+  --color-verde-claro2: #eaf3de;
+  --color-arena: #f5f0e8;
+  --color-ambar: #e8923a;
+  --color-ambar-suave: #fde8d0;
+  --color-ambar-texto: #7a3a0a;
+  --color-ambar-texto2: #8b4a10;
+  --color-negro: #141210;
+  --color-gris: #6b6560;
+  --color-borde: #e2ddd5;
+  --color-azul: #378add;
+  --color-azul-oscuro: #185fa5;
+  --color-azul-claro: #e6f1fb;
+  --color-teal: #4ecdc4;
+  --color-rojo: #e24b4a;
+  --color-rojo-claro: #fee2e2;
+
+  --font-display: var(--font-syne);
+  --font-sans: var(--font-inter);
+}
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-arena);
+  color: var(--color-negro);
+  font-family: var(--font-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-sans), sans-serif;
+}
