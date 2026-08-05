@@ -12,9 +12,9 @@ import Spinner from '@/components/ui/Spinner';
 
 const ACCESOS = [
   { href: '/analizar', emoji: '📍', titulo: 'Nuevo análisis', sub: 'Analiza un negocio' },
+  { href: '/inventario', emoji: '📦', titulo: 'Inventario', sub: 'Productos + Auditoría IA' },
   { href: '/verificar-nombre', emoji: '🔎', titulo: 'Verificar nombre', sub: 'RUES + SIC + .co' },
   { href: '/historial', emoji: '📊', titulo: 'Mis análisis', sub: 'Consulta el historial' },
-  { href: '/planes', emoji: '💳', titulo: 'Planes y pagos', sub: 'Mejora tu plan' },
 ];
 
 export default function DashboardPage() {

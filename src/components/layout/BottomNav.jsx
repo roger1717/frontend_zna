@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 const ITEMS = [
   { href: '/', emoji: '🏠', etiqueta: 'Inicio' },
   { href: '/analizar', emoji: '🔍', etiqueta: 'Analizar' },
-  { href: '/verificar-nombre', emoji: '🔎', etiqueta: 'Nombre' },
+  { href: '/inventario', emoji: '📦', etiqueta: 'Inventario' },
   { href: '/historial', emoji: '📊', etiqueta: 'Historial' },
   { href: '/perfil', emoji: '👤', etiqueta: 'Perfil' },
 ];

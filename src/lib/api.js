@@ -4,8 +4,15 @@ import {
   SEGUIMIENTO_EJEMPLO,
   VERIFICACION_NOMBRE_EJEMPLO,
 } from './mockData';
+import {
+  demoListar,
+  demoCrear,
+  demoEditar,
+  demoBorrar,
+  demoAuditoria,
+} from './inventarioDemo';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -120,6 +127,82 @@ export async function registrarSeguimiento(payload, token) {
   } catch (err) {
     if (err.status === 400 || err.status === 403) throw err;
     return { demo: true };
+  }
+}
+
+// --- Perfil del usuario autenticado (Fase 2) ---
+export async function obtenerPerfil(token) {
+  try {
+    const resultado = await apiFetch('/api/perfil', { token });
+    return { ...resultado, demo: false };
+  } catch {
+    return { perfil: null, demo: true };
+  }
+}
+
+// --- Inventario (Fase 2) ---
+// Requiere sesión real + Supabase. Sin ellos (modo demo / sin backend), cae a un
+// store local (inventarioDemo) para que la pantalla sea usable, marcado como demo.
+// Los errores de validación (400) SÍ se propagan para mostrarse al usuario.
+
+function esErrorSinBackend(err) {
+  // 0 = sin conexión · 401 = sin sesión real · 503 = BD no configurada.
+  return err instanceof ApiError && [0, 401, 503].includes(err.status);
+}
+
+export async function listarProductos(token) {
+  try {
+    const { productos } = await apiFetch('/api/inventario', { token });
+    return { productos, demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return { productos: demoListar(), demo: true };
+    throw err;
+  }
+}
+
+export async function crearProducto(payload, token) {
+  try {
+    const { producto } = await apiFetch('/api/inventario', { method: 'POST', body: payload, token });
+    return { producto, demo: false };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 400) throw err;
+    if (esErrorSinBackend(err)) return { producto: demoCrear(payload), demo: true };
+    throw err;
+  }
+}
+
+export async function editarProducto(id, payload, token) {
+  try {
+    const { producto } = await apiFetch(`/api/inventario/${id}`, { method: 'PATCH', body: payload, token });
+    return { producto, demo: false };
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 400 || err.status === 404)) throw err;
+    if (esErrorSinBackend(err)) return { producto: demoEditar(id, payload), demo: true };
+    throw err;
+  }
+}
+
+export async function borrarProducto(id, token) {
+  try {
+    await apiFetch(`/api/inventario/${id}`, { method: 'DELETE', token });
+    return { demo: false };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) throw err;
+    if (esErrorSinBackend(err)) {
+      demoBorrar(id);
+      return { demo: true };
+    }
+    throw err;
+  }
+}
+
+export async function auditarInventario(token) {
+  try {
+    const resultado = await apiFetch('/api/inventario/auditoria', { method: 'POST', token });
+    return { ...resultado, demo: resultado.demo ?? false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return demoAuditoria();
+    throw err;
   }
 }
 
