@@ -113,11 +113,43 @@ export const HISTORIAL_EJEMPLO = {
   total: 3,
 };
 
-export const SEGUIMIENTO_EJEMPLO = {
-  registrado: true,
-  hoy: { ventas: 185000, clientesAtendidos: 12, gastosMercancia: 60000 },
-  ventasAyer: 171000,
-  calculado: { ticketPromedio: 15417, variacionVentasPct: 8.2, gananciaEstimada: 125000 },
+// Dashboard de Ventas (Fase 3) para el modo de ejemplo: cuando la app corre sin
+// claves de Supabase no hay ventas reales que mostrar, pero la pantalla debe
+// poderse ver. Va marcado `demo: true` y en pantalla sale el aviso.
+//
+// Los días se generan al vuelo para que el gráfico siempre termine HOY (con
+// fechas fijas se vería un gráfico de la semana pasada).
+function ultimosSieteDias() {
+  const dias = [];
+  const montos = [188000, 142000, 96000, 210000, 175000, 264000, 131000];
+  for (let i = 6; i >= 0; i -= 1) {
+    const f = new Date();
+    f.setDate(f.getDate() - i);
+    const iso = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+    dias.push({ dia: iso, ingresos: montos[6 - i], ordenes: Math.round(montos[6 - i] / 15000) });
+  }
+  return dias;
+}
+
+export const DASHBOARD_EJEMPLO = {
+  zona_horaria: 'America/Bogota',
+  kpis: {
+    ventas_hoy: 131000,
+    ordenes_hoy: 9,
+    utilidad_hoy: 28400,
+    unidades_hoy: 21,
+    ingresos_semana: 1206000,
+    utilidad_semana: 259000,
+    ticket_promedio: 14556,
+    variacion_vs_ayer_pct: -12.4,
+    avance_semanal_pct: 6.8,
+  },
+  serie_7_dias: ultimosSieteDias(),
+  top_productos: [
+    { nombre: 'Gaseosa 1.5L', unidades: 14, ingresos: 77000 },
+    { nombre: 'Leche 1L', unidades: 12, ingresos: 52800 },
+    { nombre: 'Pan tajado', unidades: 9, ingresos: 45000 },
+  ],
 };
 
 export const VERIFICACION_NOMBRE_EJEMPLO = {

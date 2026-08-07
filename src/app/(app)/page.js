@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { obtenerHistorial } from '@/lib/api';
+import { obtenerDashboard, obtenerHistorial } from '@/lib/api';
 import { nombreSector, emojiSector } from '@/lib/constants';
+import { formatoCOP, formatoNumero } from '@/lib/formato';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 
 const ACCESOS = [
-  { href: '/analizar', emoji: '📍', titulo: 'Nuevo análisis', sub: 'Analiza un negocio' },
+  { href: '/ventas', emoji: '🧾', titulo: 'Ventas', sub: 'Registra y mira tu día' },
   { href: '/inventario', emoji: '📦', titulo: 'Inventario', sub: 'Productos + Auditoría IA' },
   { href: '/verificar-nombre', emoji: '🔎', titulo: 'Verificar nombre', sub: 'RUES + SIC + .co' },
   { href: '/historial', emoji: '📊', titulo: 'Mis análisis', sub: 'Consulta el historial' },
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const { user, token } = useAuth();
   const router = useRouter();
   const [recientes, setRecientes] = useState(null);
+  const [ventasHoy, setVentasHoy] = useState(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -29,8 +31,38 @@ export default function DashboardPage() {
       .finally(() => setCargando(false));
   }, [token]);
 
+  // Resumen del día en Inicio: es el dato que el tendero quiere ver al abrir la
+  // app. Si falla, simplemente no se muestra la tarjeta — no vale la pena un
+  // mensaje de error en la pantalla de bienvenida.
+  useEffect(() => {
+    obtenerDashboard(token)
+      .then((d) => setVentasHoy({ ...d.kpis, demo: d.demo }))
+      .catch(() => setVentasHoy(null));
+  }, [token]);
+
   return (
     <>
+      {ventasHoy && (
+        <Link href="/ventas">
+          <Card className="flex items-center gap-4 cursor-pointer hover:border-verde-suave transition">
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] text-gris mb-0.5">
+                Vendido hoy{ventasHoy.demo ? ' (ejemplo)' : ''}
+              </div>
+              <div className="font-display font-bold text-[22px] text-negro leading-none">
+                {formatoCOP(ventasHoy.ventas_hoy)}
+              </div>
+              <div className="text-[11px] text-gris mt-1">
+                {formatoNumero(ventasHoy.ordenes_hoy)}{' '}
+                {Number(ventasHoy.ordenes_hoy) === 1 ? 'venta' : 'ventas'} ·{' '}
+                {formatoCOP(ventasHoy.utilidad_hoy)} de ganancia
+              </div>
+            </div>
+            <span className="text-[11px] text-verde font-medium flex-shrink-0">Ver →</span>
+          </Card>
+        </Link>
+      )}
+
       <div className="bg-verde rounded-2xl p-6 text-center">
         <div className="font-display font-extrabold text-2xl text-white mb-1.5 leading-tight tracking-tight">
           Conoce tu zona

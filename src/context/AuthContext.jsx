@@ -2,10 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase, supabaseConfigurado } from '@/lib/supabaseClient';
+import { EVENTO_SESION_VENCIDA } from '@/lib/api';
 
 const AuthContext = createContext(null);
 
 const CLAVE_DEMO = 'zonapp_demo_sesion';
+
+// Tope para recuperar la sesión al arrancar. Si Supabase no responde en este
+// tiempo, la app entra como anónimo en vez de quedarse cargando.
+const TIEMPO_LIMITE_MS = 8000;
 
 function leerSesionDemo() {
   if (typeof window === 'undefined') return null;
@@ -28,25 +33,75 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (supabaseConfigurado) {
-      supabase.auth.getSession().then(({ data }) => {
-        setUser(data.session?.user ?? null);
-        setToken(data.session?.access_token ?? null);
-        setLoading(false);
-      });
-      const { data: suscripcion } = supabase.auth.onAuthStateChange((_evento, session) => {
-        setUser(session?.user ?? null);
-        setToken(session?.access_token ?? null);
-      });
-      return () => suscripcion.subscription.unsubscribe();
+    if (!supabaseConfigurado) {
+      const sesion = leerSesionDemo();
+      if (sesion) {
+        setUser(sesion.user);
+        setToken(sesion.token);
+      }
+      setLoading(false);
+      return;
     }
 
-    const sesion = leerSesionDemo();
-    if (sesion) {
-      setUser(sesion.user);
-      setToken(sesion.token);
+    let vigente = true;
+
+    // `loading` DEBE terminar siempre: si se queda en true, el layout muestra
+    // el spinner para siempre y ni siquiera redirige al login. Por eso hay
+    // límite de tiempo y captura de errores.
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, rechazar) =>
+        setTimeout(() => rechazar(new Error('Supabase no respondió a tiempo.')), TIEMPO_LIMITE_MS),
+      ),
+    ])
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!vigente) return;
+        setUser(data.session?.user ?? null);
+        setToken(data.session?.access_token ?? null);
+      })
+      .catch(async (err) => {
+        // Caso típico: se corrió `supabase db reset` y el token guardado en el
+        // navegador ya no existe en la base. Se limpia la sesión rota y se
+        // sigue como anónimo (el layout redirige al login).
+        console.warn('[auth] sesión no recuperable, se limpia:', err?.message);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        if (!vigente) return;
+        setUser(null);
+        setToken(null);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    const { data: suscripcion } = supabase.auth.onAuthStateChange((_evento, session) => {
+      setUser(session?.user ?? null);
+      setToken(session?.access_token ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      vigente = false;
+      suscripcion.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Si el backend responde 401 con Supabase configurado, el token ya no sirve
+  // (venció, o la base se reinició). Se limpia la sesión y el layout de (app)
+  // manda al login. Antes esto se trataba como "no hay backend" y la app mostraba
+  // datos de ejemplo — el usuario creía estar viendo su inventario.
+  useEffect(() => {
+    async function alVencer() {
+      if (supabaseConfigurado) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+      setUser(null);
+      setToken(null);
+      setLoading(false);
     }
-    setLoading(false);
+
+    window.addEventListener(EVENTO_SESION_VENCIDA, alVencer);
+    return () => window.removeEventListener(EVENTO_SESION_VENCIDA, alVencer);
   }, []);
 
   const login = useCallback(async (email, password) => {

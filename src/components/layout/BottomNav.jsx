@@ -8,11 +8,16 @@ import { usePathname } from 'next/navigation';
 // el backend (ver decisión del usuario), así que esos dos espacios se
 // reasignaron a Historial y Perfil — pantallas que en el diseño original
 // no tenían ningún botón que llevara a ellas.
+//
+// En la sub-fase 3.6 entró **Ventas** y salió **Historial** (riesgo R6 del plan
+// de la Fase 3): seguimos en 5 ítems, que es lo que cabe cómodo en 360 px.
+// Ventas se usa varias veces al día; el historial de análisis se consulta una vez
+// cada tanto y sigue a un toque desde Inicio ("Mis análisis").
 const ITEMS = [
   { href: '/', emoji: '🏠', etiqueta: 'Inicio' },
-  { href: '/analizar', emoji: '🔍', etiqueta: 'Analizar' },
+  { href: '/ventas', emoji: '🧾', etiqueta: 'Ventas' },
   { href: '/inventario', emoji: '📦', etiqueta: 'Inventario' },
-  { href: '/historial', emoji: '📊', etiqueta: 'Historial' },
+  { href: '/analizar', emoji: '🔍', etiqueta: 'Analizar' },
   { href: '/perfil', emoji: '👤', etiqueta: 'Perfil' },
 ];
 

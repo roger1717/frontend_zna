@@ -1,7 +1,7 @@
 import {
   ANALISIS_EJEMPLO,
+  DASHBOARD_EJEMPLO,
   HISTORIAL_EJEMPLO,
-  SEGUIMIENTO_EJEMPLO,
   VERIFICACION_NOMBRE_EJEMPLO,
 } from './mockData';
 import {
@@ -11,8 +11,21 @@ import {
   demoBorrar,
   demoAuditoria,
 } from './inventarioDemo';
+import { supabaseConfigurado } from './supabaseClient';
+import { permiteDatosDeEjemplo } from './erroresApi';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Aviso de "tu sesión se venció". Lo escucha AuthContext, que limpia la sesión;
+// el layout de (app) ve que ya no hay usuario y manda al login. Se hace con un
+// evento para no acoplar esta capa (llamadas HTTP) con la de sesión.
+export const EVENTO_SESION_VENCIDA = 'zonapp:sesion-vencida';
+
+function avisarSesionVencida() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(EVENTO_SESION_VENCIDA));
+  }
+}
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -41,9 +54,20 @@ async function apiFetch(ruta, { method = 'GET', body, token } = {}) {
 
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
+    // Con Supabase configurado, un 401 solo puede significar una cosa: el token
+    // venció o dejó de existir. Hay que volver a entrar.
+    if (respuesta.status === 401 && supabaseConfigurado) avisarSesionVencida();
     throw new ApiError(datos.error || 'Ocurrió un error inesperado.', respuesta.status);
   }
   return datos;
+}
+
+// La regla vive en lib/erroresApi.js (pura y probada aparte). Aquí solo se le
+// conecta el contexto: el error que llegó y si la app tiene Supabase de verdad.
+// Ver el hallazgo A1 de docs/research/preparacion-movil-fases-1-3.md.
+function esErrorSinBackend(err) {
+  if (!(err instanceof ApiError)) return false;
+  return permiteDatosDeEjemplo(err.status, supabaseConfigurado);
 }
 
 // --- Cada función intenta la llamada REAL primero. Si el backend no
@@ -60,12 +84,12 @@ export async function analizarZona(payload, token) {
     // false — para no presentar un mock como si fuera real.
     return { demo: false, ...resultado };
   } catch (err) {
-    // Los errores de validación (400) y de límite de plan (403) SÍ deben
-    // mostrarse al usuario tal cual — no tiene sentido taparlos con un
-    // ejemplo. Solo caemos a demo cuando el problema es de conexión o de
-    // claves externas todavía no configuradas (502/0).
-    if (err.status === 400 || err.status === 403) throw err;
-    return { ...ANALISIS_EJEMPLO, demo: true };
+    // Solo se muestra un análisis de ejemplo cuando no había forma de conseguir
+    // el real: sin conexión, sin base de datos, o falló el servicio externo (502).
+    // Un 400 (datos inválidos), un 403 (límite del plan) y un 401 (sesión
+    // vencida) se muestran tal cual: son cosas que el usuario debe saber.
+    if (esErrorSinBackend(err) || err.status === 502) return { ...ANALISIS_EJEMPLO, demo: true };
+    throw err;
   }
 }
 
@@ -74,8 +98,8 @@ export async function verificarNombre(payload, token) {
     const resultado = await apiFetch('/api/verificar-nombre', { method: 'POST', body: payload, token });
     return { ...resultado, demo: false };
   } catch (err) {
-    if (err.status === 400) throw err;
-    return { ...VERIFICACION_NOMBRE_EJEMPLO, demo: true };
+    if (esErrorSinBackend(err) || err.status === 502) return { ...VERIFICACION_NOMBRE_EJEMPLO, demo: true };
+    throw err;
   }
 }
 
@@ -83,8 +107,10 @@ export async function obtenerHistorial({ pagina = 1, porPagina = 10 } = {}, toke
   try {
     const resultado = await apiFetch(`/api/historial?pagina=${pagina}&porPagina=${porPagina}`, { token });
     return { ...resultado, demo: false };
-  } catch {
-    return { ...HISTORIAL_EJEMPLO, demo: true };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return { ...HISTORIAL_EJEMPLO, demo: true };
+    // Sesión vencida u otro error: lista vacía, nunca análisis inventados.
+    return { items: [], pagina, porPagina, total: 0, demo: false };
   }
 }
 
@@ -92,7 +118,8 @@ export async function obtenerHistorialDetalle(id, token) {
   try {
     const resultado = await apiFetch(`/api/historial/${id}`, { token });
     return { ...resultado, demo: false };
-  } catch {
+  } catch (err) {
+    if (!esErrorSinBackend(err)) return null;
     return {
       id,
       zona: 'Chapinero Alto, Bogotá',
@@ -104,31 +131,11 @@ export async function obtenerHistorialDetalle(id, token) {
   }
 }
 
-// Seguimiento diario es exclusivo Pro/Equipo (ver config/planes.js del
-// backend). Si el backend responde 403, es una regla de negocio real —
-// se muestra tal cual, no se tapa con datos de ejemplo. En modo demo no
-// hay sesión real, así que el backend responde 401 antes de llegar a
-// revisar el plan — eso SÍ cae a datos de ejemplo, dejando el módulo
-// abierto para probarlo sin necesidad de una cuenta Pro real.
-export async function obtenerResumenSeguimiento(token) {
-  try {
-    const resultado = await apiFetch('/api/seguimiento/resumen', { token });
-    return { ...resultado, demo: false };
-  } catch (err) {
-    if (err.status === 403) throw err;
-    return { ...SEGUIMIENTO_EJEMPLO, demo: true };
-  }
-}
-
-export async function registrarSeguimiento(payload, token) {
-  try {
-    await apiFetch('/api/seguimiento', { method: 'POST', body: payload, token });
-    return { demo: false };
-  } catch (err) {
-    if (err.status === 400 || err.status === 403) throw err;
-    return { demo: true };
-  }
-}
+// Nota: aquí vivían `obtenerResumenSeguimiento` y `registrarSeguimiento`. Se
+// borraron en la sub-fase 3.6: llamaban a `/api/seguimiento`, endpoints que el
+// backend nunca implementó, así que esa pantalla siempre mostraba datos de
+// ejemplo. Su función la cumple ahora `/ventas` con datos reales (decisión D7 en
+// docs/research/plan-3-dashboard-ventas.md).
 
 // --- Perfil del usuario autenticado (Fase 2) ---
 export async function obtenerPerfil(token) {
@@ -144,11 +151,6 @@ export async function obtenerPerfil(token) {
 // Requiere sesión real + Supabase. Sin ellos (modo demo / sin backend), cae a un
 // store local (inventarioDemo) para que la pantalla sea usable, marcado como demo.
 // Los errores de validación (400) SÍ se propagan para mostrarse al usuario.
-
-function esErrorSinBackend(err) {
-  // 0 = sin conexión · 401 = sin sesión real · 503 = BD no configurada.
-  return err instanceof ApiError && [0, 401, 503].includes(err.status);
-}
 
 export async function listarProductos(token) {
   try {
@@ -202,6 +204,66 @@ export async function auditarInventario(token) {
     return { ...resultado, demo: resultado.demo ?? false };
   } catch (err) {
     if (esErrorSinBackend(err)) return demoAuditoria();
+    throw err;
+  }
+}
+
+// --- Ventas y Dashboard (Fase 3) ---
+//
+// Estas necesitan cuenta real: una venta descuenta stock de verdad. En modo de
+// ejemplo (sin claves de Supabase) el dashboard SÍ se puede ver —marcado como
+// ejemplo— pero registrar y anular se rechazan con un mensaje claro. Fingir que
+// se guardó una venta que no se guardó sería justo lo contrario de la regla de
+// honestidad de datos.
+
+const SOLO_CON_CUENTA = 'Para registrar ventas necesitas una cuenta real (modo de ejemplo activo).';
+
+export async function obtenerDashboard(token) {
+  try {
+    const resultado = await apiFetch('/api/dashboard', { token });
+    return { ...resultado, demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return { ...DASHBOARD_EJEMPLO, demo: true };
+    throw err;
+  }
+}
+
+export async function listarVentas(token) {
+  try {
+    const { ventas } = await apiFetch('/api/ventas', { token });
+    return { ventas: ventas || [], demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return { ventas: [], demo: true };
+    throw err;
+  }
+}
+
+export async function registrarVenta(payload, token) {
+  try {
+    const { venta } = await apiFetch('/api/ventas', { method: 'POST', body: payload, token });
+    return { venta, demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) throw new ApiError(SOLO_CON_CUENTA, 0);
+    throw err;
+  }
+}
+
+export async function corregirVenta(id, payload, token) {
+  try {
+    const { venta } = await apiFetch(`/api/ventas/${id}`, { method: 'PUT', body: payload, token });
+    return { venta, demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) throw new ApiError(SOLO_CON_CUENTA, 0);
+    throw err;
+  }
+}
+
+export async function anularVenta(id, token) {
+  try {
+    await apiFetch(`/api/ventas/${id}`, { method: 'DELETE', token });
+    return { demo: false };
+  } catch (err) {
+    if (esErrorSinBackend(err)) throw new ApiError(SOLO_CON_CUENTA, 0);
     throw err;
   }
 }
