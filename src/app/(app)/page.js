@@ -77,6 +77,19 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      <Link href="/chat">
+        <Card className="flex items-center gap-3 cursor-pointer hover:border-verde-suave transition">
+          <div className="w-11 h-11 rounded-xl bg-verde-claro flex items-center justify-center text-xl flex-shrink-0">
+            💬
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold text-negro">Pregúntale a tu asistente</div>
+            <div className="text-[11px] text-gris">Tus ventas, inventario y cómo usar la app</div>
+          </div>
+          <span className="text-[11px] text-verde font-medium flex-shrink-0">Abrir →</span>
+        </Card>
+      </Link>
+
       <div className="grid grid-cols-2 gap-2.5">
         {ACCESOS.map((a) => (
           <Link key={a.href} href={a.href}>

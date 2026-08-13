@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -10,13 +10,20 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
 export default function RegistroPage() {
-  const { registro, modoDemo } = useAuth();
+  const { registro, modoDemo, user, loading } = useAuth();
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [confirmacion, setConfirmacion] = useState(false);
+
+  // Si ya hay sesión, no mostramos el registro. (No aplica cuando acabamos de
+  // pedir confirmación de correo: ahí todavía no hay sesión.)
+  useEffect(() => {
+    if (!loading && user && !confirmacion) router.replace('/');
+  }, [loading, user, confirmacion, router]);
 
   async function manejarSubmit(e) {
     e.preventDefault();
@@ -29,13 +36,30 @@ export default function RegistroPage() {
 
     setCargando(true);
     try {
-      await registro(email, password, nombre);
-      router.push('/');
+      const { necesitaConfirmacion } = await registro(email, password, nombre);
+      if (necesitaConfirmacion) {
+        setConfirmacion(true); // producción con verificación de correo activada
+      } else {
+        router.replace('/');
+      }
     } catch (err) {
       setError(err.message || 'No se pudo crear la cuenta.');
     } finally {
       setCargando(false);
     }
+  }
+
+  if (confirmacion) {
+    return (
+      <AuthLayout>
+        <h1 className="font-display font-extrabold text-xl text-negro mb-1">Revisa tu correo</h1>
+        <p className="text-[13px] text-gris mb-5">
+          Te enviamos un enlace a <span className="font-semibold text-negro">{email}</span> para
+          confirmar tu cuenta. Ábrelo y luego inicia sesión.
+        </p>
+        <Button onClick={() => router.push('/login')}>Ir a iniciar sesión</Button>
+      </AuthLayout>
+    );
   }
 
   return (

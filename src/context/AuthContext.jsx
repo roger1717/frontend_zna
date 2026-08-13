@@ -129,9 +129,14 @@ export function AuthProvider({ children }) {
         options: { data: { nombre } },
       });
       if (error) throw new Error(error.message);
+      // Si la confirmación de correo está activada (producción), signUp NO
+      // devuelve sesión: el usuario debe confirmar su correo antes de entrar.
+      // No lo marcamos como logueado con token null, porque entonces las
+      // llamadas al backend fallarían con 401 y parecería un bug.
+      if (!data.session) return { necesitaConfirmacion: true };
       setUser(data.user);
-      setToken(data.session?.access_token ?? null);
-      return;
+      setToken(data.session.access_token);
+      return { necesitaConfirmacion: false };
     }
 
     if (!email || !password) throw new Error('Ingresa correo y contraseña.');
@@ -140,6 +145,29 @@ export function AuthProvider({ children }) {
     localStorage.setItem(CLAVE_DEMO, JSON.stringify(sesion));
     setUser(demoUser);
     setToken(sesion.token);
+    return { necesitaConfirmacion: false };
+  }, []);
+
+  // Paso 1 de "olvidé mi contraseña": Supabase envía un correo con un enlace que
+  // trae de vuelta al usuario a /actualizar-contrasena con una sesión temporal.
+  const recuperarContrasena = useCallback(async (email) => {
+    const limpio = (email || '').trim();
+    if (!limpio) throw new Error('Ingresa tu correo electrónico.');
+    if (!supabaseConfigurado) return; // demo: no hay un correo real que enviar.
+    const redirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/actualizar-contrasena` : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(limpio, { redirectTo });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  // Paso 2: ya con la sesión de recuperación activa, se fija la nueva contraseña.
+  const actualizarContrasena = useCallback(async (password) => {
+    if (!password || password.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    }
+    if (!supabaseConfigurado) return; // demo
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
   }, []);
 
   const logout = useCallback(async () => {
@@ -154,7 +182,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, modoDemo: !supabaseConfigurado, login, registro, logout }}
+      value={{
+        user,
+        token,
+        loading,
+        modoDemo: !supabaseConfigurado,
+        login,
+        registro,
+        logout,
+        recuperarContrasena,
+        actualizarContrasena,
+      }}
     >
       {children}
     </AuthContext.Provider>

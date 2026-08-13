@@ -268,6 +268,15 @@ export async function anularVenta(id, token) {
   }
 }
 
+// --- Chatbot (Fase 4) ---
+// A diferencia de las demás, NO cae a datos de ejemplo: una respuesta de
+// asistente inventada sería justo lo contrario de la regla de honestidad. Si
+// algo falla, se propaga el ApiError y la pantalla muestra el problema tal cual
+// (sin conexión, sesión vencida, límite alcanzado, etc.).
+export async function enviarMensajeChatbot(mensaje, token) {
+  return apiFetch('/api/chatbot/mensajes', { method: 'POST', body: { mensaje }, token });
+}
+
 export async function iniciarPago(plan, token) {
   try {
     const resultado = await apiFetch('/api/pago/iniciar', { method: 'POST', body: { plan }, token });

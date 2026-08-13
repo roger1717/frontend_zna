@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -10,12 +10,17 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
 export default function LoginPage() {
-  const { login, modoDemo } = useAuth();
+  const { login, modoDemo, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+
+  // Si ya hay sesión, no tiene sentido mostrar el login: al inicio.
+  useEffect(() => {
+    if (!loading && user) router.replace('/');
+  }, [loading, user, router]);
 
   async function manejarSubmit(e) {
     e.preventDefault();
@@ -23,7 +28,7 @@ export default function LoginPage() {
     setCargando(true);
     try {
       await login(email, password);
-      router.push('/');
+      router.replace('/');
     } catch (err) {
       setError(err.message || 'No se pudo iniciar sesión.');
     } finally {
@@ -65,7 +70,13 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="text-center text-[13px] text-gris mt-5">
+      <p className="text-center text-[13px] mt-4">
+        <Link href="/recuperar-contrasena" className="text-verde font-semibold">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
+
+      <p className="text-center text-[13px] text-gris mt-3">
         ¿No tienes cuenta?{' '}
         <Link href="/registro" className="text-verde font-semibold">
           Regístrate
