@@ -1,47 +1,67 @@
+// frontend/src/app/planes/page.js
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { iniciarPago } from '@/lib/api';
-import { PLANES } from '@/lib/constants';
+import { iniciarPago, obtenerCatalogoPlanes } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
-// Wompi "Web Checkout" (redirect) — no necesita incrustar ningún widget
-// ni script de terceros, solo arma la URL con los datos firmados que
-// devuelve /api/pago/iniciar y redirige. Ver docs.wompi.co.
-function urlCheckoutWompi({ referencia, montoCentavos, moneda, firmaIntegridad, llavePublica }) {
-  const params = new URLSearchParams({
-    'public-key': llavePublica,
-    currency: moneda,
-    'amount-in-cents': String(montoCentavos),
-    reference: referencia,
-    'signature:integrity': firmaIntegridad,
-  });
-  return `https://checkout.wompi.co/p/?${params.toString()}`;
-}
-
 export default function PlanesPage() {
   const { token } = useAuth();
+  const [planes, setPlanes] = useState([]);
   const [cargando, setCargando] = useState(null);
   const [error, setError] = useState('');
+  const [cargandoPlanes, setCargandoPlanes] = useState(true);
+
+  useEffect(() => {
+    if (!token) {
+      setCargandoPlanes(false);
+      return;
+    }
+    obtenerCatalogoPlanes(token)
+      .then((lista) => {
+        setPlanes(lista);
+        setCargandoPlanes(false);
+      })
+      .catch(() => {
+        setError('No se pudieron cargar los planes. Intenta de nuevo.');
+        setCargandoPlanes(false);
+      });
+  }, [token]);
 
   async function elegirPlan(planId) {
     setError('');
     setCargando(planId);
     try {
       const datos = await iniciarPago(planId, token);
-      if (!datos.llavePublica) {
-        throw new Error('Los pagos todavía no están conectados — falta configurar la llave pública de Wompi.');
+      if (!datos.url) {
+        throw new Error('No se pudo obtener la URL de pago. Verifica la configuración de Wompi.');
       }
-      window.location.href = urlCheckoutWompi(datos);
+      window.location.href = datos.url; // Redirige a Wompi
     } catch (err) {
       setError(err.message || 'No se pudo iniciar el pago.');
     } finally {
       setCargando(null);
     }
+  }
+
+  if (cargandoPlanes) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-gris">Cargando planes...</div>
+      </div>
+    );
+  }
+
+  if (!planes || planes.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gris">No hay planes disponibles.</p>
+      </div>
+    );
   }
 
   return (
@@ -54,7 +74,7 @@ export default function PlanesPage() {
       {error && <Alert tone="error">{error}</Alert>}
 
       <div className="flex flex-col gap-3">
-        {PLANES.map((plan) => (
+        {planes.map((plan) => (
           <Card
             key={plan.id}
             className={plan.destacado ? 'border-verde border-[1.5px] relative' : 'relative'}
@@ -73,7 +93,7 @@ export default function PlanesPage() {
             </div>
             <div className="text-xs text-gris mb-3">{plan.descripcion}</div>
             <div className="flex flex-col gap-1.5 mb-4">
-              {plan.caracteristicas.map((c) => (
+              {plan.caracteristicas && plan.caracteristicas.map((c) => (
                 <div key={c} className="flex items-start gap-2 text-[12px] text-negro">
                   <Check className="h-3.5 w-3.5 text-verde flex-shrink-0 mt-0.5" />
                   {c}
@@ -87,8 +107,9 @@ export default function PlanesPage() {
                 variant={plan.destacado ? 'dark' : 'outline'}
                 loading={cargando === plan.id}
                 onClick={() => elegirPlan(plan.id)}
+                disabled={!token}
               >
-                Elegir {plan.nombre}
+                {!token ? 'Inicia sesión para elegir' : `Elegir ${plan.nombre}`}
               </Button>
             )}
           </Card>

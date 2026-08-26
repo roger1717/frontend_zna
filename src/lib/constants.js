@@ -4,6 +4,7 @@
 // lista al backend en cada carga) porque son datos que casi no cambian
 // y así la pantalla de "Nuevo análisis" no depende de una llamada extra.
 
+// archivo src/lib/constants.js
 export const SECTORES = [
   { id: 'tienda_barrio', emoji: '🛒', nombre: 'Tienda de barrio' },
   { id: 'restaurante', emoji: '🍽️', nombre: 'Restaurante' },

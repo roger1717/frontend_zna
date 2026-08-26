@@ -278,13 +278,10 @@ export async function enviarMensajeChatbot(mensaje, token) {
 }
 
 export async function iniciarPago(plan, token) {
-  try {
-    const resultado = await apiFetch('/api/pago/iniciar', { method: 'POST', body: { plan }, token });
-    return { ...resultado, demo: false };
-  } catch {
-    // No hay un checkout de mentira que tenga sentido mostrar — el
-    // widget de Wompi necesita una llave pública real. Simplemente
-    // avisamos que todavía no está conectado.
-    throw new ApiError('Los pagos todavía no están conectados (falta configurar Wompi).', 0);
-  }
+  return apiFetch('/api/pagos/iniciar', { method: 'POST', body: { plan }, token });
+}
+
+export async function obtenerCatalogoPlanes(token) {
+  const resultado = await apiFetch('/api/planes', { token });
+  return resultado.planes || [];
 }

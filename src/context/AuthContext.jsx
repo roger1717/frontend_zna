@@ -1,3 +1,5 @@
+// archivo src/context/AuthContext.jsx
+
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
