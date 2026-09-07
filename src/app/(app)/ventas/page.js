@@ -150,11 +150,12 @@ export default function VentasPage() {
 
       <RegistrarVenta
         productos={productos}
-        clientes={clientes} 
+        servicios={servicios}
+        clientes={clientes}
         guardando={guardando}
         error={errorRegistro}
         onRegistrar={registrar}
-        onCrearCliente={crearClienteDesdeVenta} 
+        onCrearCliente={crearClienteDesdeVenta}
       />
 
       {sinCosto > 0 && (
