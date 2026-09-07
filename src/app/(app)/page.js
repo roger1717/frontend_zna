@@ -1,3 +1,5 @@
+// frontend/src/app/(app)/page.js
+
 'use client';
 
 import { useEffect, useState } from 'react';

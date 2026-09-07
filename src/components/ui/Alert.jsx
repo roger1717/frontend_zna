@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/Alert.jsx */
 import { Info, TriangleAlert, CircleAlert, FlaskConical } from 'lucide-react';
 
 const TONOS = {

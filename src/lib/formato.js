@@ -1,3 +1,4 @@
+/* frontend/src/lib/formato.js */
 // Formato de números y fechas para pantalla. Un solo lugar, para que los pesos
 // se vean igual en toda la app.
 

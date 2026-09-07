@@ -1,3 +1,6 @@
+
+
+// frontend/src/app/(app)/ventas/page.js
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -10,6 +13,9 @@ import {
   obtenerDashboard,
   registrarVenta,
   ApiError,
+  listarClientes,
+  crearCliente,
+  marcarVentaPagada
 } from '@/lib/api';
 import { formatoCOP } from '@/lib/formato';
 import Alert from '@/components/ui/Alert';
@@ -19,16 +25,8 @@ import KpisDia from '@/components/ventas/KpisDia';
 import GraficoBarras7Dias from '@/components/ventas/GraficoBarras7Dias';
 import TopProductos from '@/components/ventas/TopProductos';
 import ListaVentas from '@/components/ventas/ListaVentas';
+import { listarServicios } from '@/lib/api';
 
-// Pantalla de Ventas (Fase 3).
-//
-// El orden importa: primero REGISTRAR (es lo que se usa cincuenta veces al día,
-// con un cliente esperando) y después los números. Un dashboard bonito arriba
-// obligaría a bajar cada vez que se vende algo.
-//
-// Ningún número se calcula aquí: los KPIs, el gráfico y el top 3 llegan ya
-// resueltos de `GET /api/dashboard`, que los saca con SQL. Si un número se ve
-// raro, se revisa la migración, no esta pantalla.
 export default function VentasPage() {
   const { token } = useAuth();
 
@@ -43,19 +41,25 @@ export default function VentasPage() {
   const [guardando, setGuardando] = useState(false);
   const [anulandoId, setAnulandoId] = useState(null);
 
+  const [clientes, setClientes] = useState([]);
+  const [marcandoPagoId, setMarcandoPagoId] = useState(null);
+  const [servicios, setServicios] = useState([]);
+
   const cargar = useCallback(async () => {
     setErrorPantalla('');
     try {
-      // Las tres en paralelo: son independientes y así la pantalla no se siente
-      // lenta por esperarlas en fila.
-      const [inv, dash, lista] = await Promise.all([
+      const [inv, dash, lista, clientesRes, serviciosRes] = await Promise.all([
         listarProductos(token),
         obtenerDashboard(token),
         listarVentas(token),
+        listarClientes(token),
+        listarServicios(token),
       ]);
       setProductos(inv.productos || []);
       setDashboard(dash);
       setVentas(lista.ventas || []);
+      setClientes(clientesRes.clientes || []);
+      setServicios(serviciosRes.servicios || []);
       setDemo(Boolean(dash.demo));
     } catch {
       setErrorPantalla('No se pudieron cargar tus ventas. Revisa tu conexión e intenta de nuevo.');
@@ -68,22 +72,38 @@ export default function VentasPage() {
     cargar();
   }, [cargar]);
 
-  async function registrar(items) {
+  async function registrar(payload) {
     setGuardando(true);
     setErrorRegistro('');
     try {
-      await registrarVenta({ items }, token);
-      // Se recarga todo: la venta cambió el stock, los KPIs y el gráfico a la vez.
+      await registrarVenta(payload, token);
       await cargar();
       return true;
     } catch (err) {
-      // El mensaje del backend se muestra tal cual: ya viene en español y con el
-      // nombre del producto ("Stock insuficiente de «Arroz 500g»: tienes 3…").
       setErrorRegistro(err instanceof ApiError ? err.message : 'No se pudo registrar la venta.');
       return false;
     } finally {
       setGuardando(false);
     }
+  }
+
+  async function marcarPagada(venta) {
+    setMarcandoPagoId(venta.id);
+    setErrorPantalla('');
+    try {
+      await marcarVentaPagada(venta.id, token);
+      await cargar();
+    } catch (err) {
+      setErrorPantalla(err instanceof ApiError ? err.message : 'No se pudo marcar la venta como pagada.');
+    } finally {
+      setMarcandoPagoId(null);
+    }
+  }
+  
+  async function crearClienteDesdeVenta(payload) {
+    const cliente = await crearCliente(payload, token);
+    setClientes((prev) => [...prev, cliente].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    return cliente;
   }
 
   async function anular(venta) {
@@ -100,8 +120,6 @@ export default function VentasPage() {
     }
   }
 
-  // Un producto con costo en 0 hace que la ganancia salga igual a la venta, o sea
-  // inflada. Mejor avisarlo que mostrar un número que no es cierto.
   const sinCosto = productos.filter((p) => Number(p.costo) === 0).length;
 
   if (cargando) {
@@ -113,7 +131,7 @@ export default function VentasPage() {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <div>
         <div className="font-display font-bold text-lg text-negro mb-1">Ventas</div>
         <div className="text-[13px] text-gris leading-relaxed">
@@ -124,7 +142,7 @@ export default function VentasPage() {
       {demo && (
         <Alert tone="demo">
           Modo de ejemplo — estos números no son de tu negocio. Inicia sesión con una cuenta real
-          (Supabase) para registrar ventas de verdad.
+          para registrar ventas de verdad.
         </Alert>
       )}
 
@@ -132,9 +150,11 @@ export default function VentasPage() {
 
       <RegistrarVenta
         productos={productos}
+        clientes={clientes} 
         guardando={guardando}
         error={errorRegistro}
         onRegistrar={registrar}
+        onCrearCliente={crearClienteDesdeVenta} 
       />
 
       {sinCosto > 0 && (
@@ -160,7 +180,9 @@ export default function VentasPage() {
         zonaHoraria={dashboard?.zona_horaria}
         anulandoId={anulandoId}
         onAnular={anular}
+        marcandoPagoId={marcandoPagoId} 
+        onMarcarPagada={marcarPagada} 
       />
-    </>
+    </div>
   );
 }

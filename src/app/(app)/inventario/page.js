@@ -1,3 +1,4 @@
+// frontend/src/app/(app)/inventario/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -19,6 +20,7 @@ import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import AuditoriaIA from '@/components/inventario/AuditoriaIA';
+import { estadoStock } from '@/lib/inventario';
 
 const FORM_VACIO = { nombre: '', stock_actual: '', stock_minimo: '', precio: '', costo: '' };
 
@@ -27,12 +29,6 @@ function formatoCOP(valor) {
   return Number.isFinite(n) ? `$${Math.round(n).toLocaleString('es-CO')}` : '—';
 }
 
-// Estado del stock frente al mínimo → color del chip (dato REAL, va en verde/ámbar/rojo).
-function estadoStock(p) {
-  if (p.stock_actual <= 0) return { tone: 'rojo', texto: 'Sin stock' };
-  if (p.stock_actual <= p.stock_minimo) return { tone: 'ambar', texto: 'Stock bajo' };
-  return { tone: 'verde', texto: 'En stock' };
-}
 
 export default function InventarioPage() {
   const { token } = useAuth();

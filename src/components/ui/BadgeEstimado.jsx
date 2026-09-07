@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/BadgeEstimado.jsx */
 import { TriangleAlert } from 'lucide-react';
 
 // Badge de "esto es una estimación de IA, no un dato verificado" — mismo

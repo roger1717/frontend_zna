@@ -21,6 +21,15 @@ export const SECTORES = [
   { id: 'tecnologia_celulares', emoji: '📱', nombre: 'Tecnología / Celulares' },
 ];
 
+export const CATEGORIAS_GASTO = [
+  { id: 'arriendo', nombre: 'Arriendo' },
+  { id: 'servicios_publicos', nombre: 'Servicios públicos' },
+  { id: 'insumos', nombre: 'Insumos' },
+  { id: 'transporte', nombre: 'Transporte' },
+  { id: 'nomina', nombre: 'Nómina' },
+  { id: 'otro', nombre: 'Otro' },
+];
+
 export function nombreSector(id) {
   return SECTORES.find((s) => s.id === id)?.nombre ?? id;
 }

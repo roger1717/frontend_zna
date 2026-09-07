@@ -1,3 +1,5 @@
+// frontend/src/app/layout.js
+
 import { Syne, Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';

@@ -1,3 +1,5 @@
+/* frontend/src/components/ui/Input.jsx */
+
 export default function Input({ label, error, className = '', ...props }) {
   return (
     <div className="flex flex-col gap-1.5">

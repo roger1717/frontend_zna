@@ -1,3 +1,4 @@
+// frontend/src/app/(app)/verificar-nombre/page.js
 'use client';
 
 import { useState } from 'react';

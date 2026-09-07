@@ -1,3 +1,4 @@
+/* frontend/src/components/ventas/TopProductos.jsx */
 import Card from '@/components/ui/Card';
 import { formatoCOP, formatoNumero } from '@/lib/formato';
 

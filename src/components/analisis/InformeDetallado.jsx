@@ -1,3 +1,4 @@
+// frontend/src/components/analisis/InformeDetallado.jsx
 'use client';
 
 import { useState } from 'react';

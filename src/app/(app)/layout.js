@@ -1,3 +1,5 @@
+// frontend/src/app/(app)/layout.js
+
 'use client';
 
 import { useEffect } from 'react';

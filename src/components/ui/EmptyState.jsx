@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/EmptyState.jsx */
 export default function EmptyState({ emoji = '📊', titulo, descripcion, children }) {
   return (
     <div className="text-center py-10 px-4">

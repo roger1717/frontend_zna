@@ -1,3 +1,4 @@
+/* frontend/src/components/inventario/AuditoriaIA.jsx */
 'use client';
 
 import { AlertTriangle, Lightbulb } from 'lucide-react';

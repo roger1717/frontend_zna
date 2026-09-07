@@ -1,3 +1,4 @@
+/* frontend/src/components/layout/AuthLayout.jsx */
 export default function AuthLayout({ children }) {
   return (
     <div className="min-h-screen bg-verde flex flex-col items-center justify-center p-6">

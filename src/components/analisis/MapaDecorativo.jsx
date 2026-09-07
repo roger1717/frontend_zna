@@ -3,6 +3,8 @@
 // con cuadrícula, un círculo punteado para la zona, y puntos para los
 // competidores encontrados. Sirve para dar contexto visual rápido, no
 // para navegar ni medir distancias reales.
+
+// frontend/src/components/analisis/MapaDecorativo.jsx
 const POSICIONES = [
   { top: 32, left: 50 },
   { top: 85, left: 25 },

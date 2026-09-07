@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/Badge.jsx */
 const TONOS = {
   verde: 'bg-verde-claro2 text-verde-suave',
   ambar: 'bg-ambar-suave text-ambar-texto',

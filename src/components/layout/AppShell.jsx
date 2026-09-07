@@ -1,3 +1,4 @@
+/* frontend/src/components/layout/AppShell.jsx */
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 

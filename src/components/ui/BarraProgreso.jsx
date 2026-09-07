@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/BarraProgreso.jsx */
 const COLOR_POR_DEFECTO = '#1D4E3A';
 
 export default function BarraProgreso({ etiqueta, valor, maximo = 100, color = COLOR_POR_DEFECTO, sufijo = '' }) {

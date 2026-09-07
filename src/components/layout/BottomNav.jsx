@@ -13,37 +13,39 @@ import { usePathname } from 'next/navigation';
 // de la Fase 3): seguimos en 5 ítems, que es lo que cabe cómodo en 360 px.
 // Ventas se usa varias veces al día; el historial de análisis se consulta una vez
 // cada tanto y sigue a un toque desde Inicio ("Mis análisis").
+
 const ITEMS = [
-  { href: '/', emoji: '🏠', etiqueta: 'Inicio' },
-  { href: '/ventas', emoji: '🧾', etiqueta: 'Ventas' },
-  { href: '/inventario', emoji: '📦', etiqueta: 'Inventario' },
-  { href: '/analizar', emoji: '🔍', etiqueta: 'Analizar' },
-  { href: '/perfil', emoji: '👤', etiqueta: 'Perfil' },
-];
+    { href: '/', label: 'Inicio', icon: '🏠' },
+    { href: '/ventas', label: 'Ventas', icon: '🧾' },
+    { href: '/inventario', label: 'Inventario', icon: '📦' },
+    { href: '/analizar', label: 'Analizar', icon: '🔍' },
+    { href: '/chat', label: 'Asistente', icon: '💬' },
+    { href: '/perfil', emoji: '👤', etiqueta: 'Perfil' },
+  ];
 
-export default function BottomNav() {
-  const pathname = usePathname();
-
-  return (
-    <div
-      className="bg-white border-t border-borde flex flex-shrink-0"
-      style={{ padding: '8px 0 calc(8px + var(--safe-bottom))' }}
-    >
-      {ITEMS.map((item) => {
-        const activo = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex-1 flex flex-col items-center gap-0.5 py-1"
-          >
-            <span className="text-[22px] leading-none">{item.emoji}</span>
-            <span className={`text-[10px] ${activo ? 'text-verde font-semibold' : 'text-gris font-medium'}`}>
-              {item.etiqueta}
-            </span>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
+  export default function BottomNav() {
+    const pathname = usePathname();
+  
+    return (
+      <div className="bg-white border-t border-borde flex px-2 py-2 pb-safe">
+        {ITEMS.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== '/' && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl ${
+                active ? 'text-verde bg-verde-claro' : 'text-gris'
+              }`}
+            >
+              <span className="text-xl">{item.icon}</span>
+              <span className="text-[10px] font-semibold mt-0.5">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }
+  

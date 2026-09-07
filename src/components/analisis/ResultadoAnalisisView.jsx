@@ -1,3 +1,4 @@
+// frontend/src/components/analisis/ResultadoAnalisisView.jsx
 'use client';
 
 import { useRouter } from 'next/navigation';

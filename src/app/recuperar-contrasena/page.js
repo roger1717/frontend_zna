@@ -1,3 +1,4 @@
+// frontend/src/app/recuperar-contrasena/page.js
 'use client';
 
 import { useState } from 'react';

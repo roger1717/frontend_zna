@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/Button.jsx */ 
 'use client';
 
 import { Loader2 } from 'lucide-react';
@@ -21,7 +22,9 @@ export default function Button({
   type = 'button',
   ...props
 }) {
-  const tamano = size === 'sm' ? 'px-3 py-2 text-[13px] rounded-xl' : 'px-4 py-3.5 text-[15px] rounded-2xl';
+  const tamano = size === 'sm'
+    ? 'px-3 py-2 text-[13px] rounded-xl'
+    : 'px-4 py-3.5 text-[15px] rounded-2xl font-display';
   return (
     <button
       type={type}

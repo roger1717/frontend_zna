@@ -1,57 +1,96 @@
+/* RUTA DEL ARCHIVO: frontend/src/components/ventas/RegistrarVenta.jsx */
 'use client';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Minus, Plus, ShoppingCart, X } from 'lucide-react';
+import { Minus, Plus, Search, ShoppingCart, X } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import Select from '@/components/ui/Select';
+import Badge from '@/components/ui/Badge';
 import Alert from '@/components/ui/Alert';
 import EmptyState from '@/components/ui/EmptyState';
+import ClientePicker from '@/components/ventas/ClientePicker';
+import { estadoStock } from '@/lib/inventario';
 import { formatoCOP } from '@/lib/formato';
 
-// Registrar una venta tiene que poderse hacer con una mano y en pocos segundos,
-// mientras el cliente espera en el mostrador. De ahí las decisiones de esta
-// pantalla: cantidad con botones − / + (no teclado numérico), el producto
-// seleccionado cuenta como parte de la venta sin necesidad de "agregarlo", y el
-// botón principal siempre dice qué va a cobrar.
-export default function RegistrarVenta({ productos, guardando, error, onRegistrar }) {
+const FILTROS = [
+  { clave: 'todos', etiqueta: 'Todos' },
+  { clave: 'en_stock', etiqueta: 'En stock' },
+  { clave: 'stock_bajo', etiqueta: 'Stock bajo' },
+];
+
+const METODOS_PAGO = [
+  { clave: 'efectivo', etiqueta: 'Efectivo' },
+  { clave: 'credito', etiqueta: 'Crédito' },
+];
+
+function normalizar(texto) {
+  return String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+// `onRegistrar` ahora recibe un objeto { items, metodo_pago, cliente_id } en
+// vez de solo `items` — VentasPage.js debe actualizarse para pasar esos campos
+// a la API tal cual (ver instrucciones aparte).
+// `clientes` y `onCrearCliente` vienen del padre (VentasPage), igual que
+// `productos` — este componente no habla directo con la API.
+export default function RegistrarVenta({ productos, clientes, guardando, error, onRegistrar, onCrearCliente }) {
   const [productoId, setProductoId] = useState('');
   const [cantidad, setCantidad] = useState(1);
   const [lineas, setLineas] = useState([]);
 
+  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState('todos');
+
+  // --- Método de pago (nuevo) ---
+  const [metodoPago, setMetodoPago] = useState('efectivo');
+  const [clienteId, setClienteId] = useState(null);
+
   const productoSel = productos.find((p) => p.id === productoId) || null;
 
-  // La selección actual ya cuenta como parte de la venta: para vender un solo
-  // producto (el caso de siempre) son dos toques y no tres. Se muestra en la
-  // lista de abajo para que no haya sorpresas de qué se va a cobrar.
   const lineasEfectivas = useMemo(() => {
-    const pendiente =
-      productoSel && cantidad > 0
-        ? [{ producto_id: productoSel.id, nombre: productoSel.nombre, precio: Number(productoSel.precio), cantidad }]
-        : [];
+    const pendiente = productoSel && cantidad > 0
+      ? [{ producto_id: productoSel.id, nombre: productoSel.nombre, precio: Number(productoSel.precio), cantidad }]
+      : [];
     return [...lineas, ...pendiente];
   }, [lineas, productoSel, cantidad]);
 
   const total = lineasEfectivas.reduce((suma, l) => suma + l.precio * l.cantidad, 0);
 
-  // Cuánto queda disponible del producto seleccionado descontando lo que ya se
-  // puso en esta misma venta (si no, se podría armar una venta que el backend va
-  // a rechazar y el tendero no entendería por qué).
-  const yaEnLaVenta = lineas
-    .filter((l) => l.producto_id === productoId)
-    .reduce((suma, l) => suma + l.cantidad, 0);
+  const yaEnLaVenta = lineas.filter((l) => l.producto_id === productoId).reduce((suma, l) => suma + l.cantidad, 0);
   const disponible = productoSel ? Number(productoSel.stock_actual) - yaEnLaVenta : 0;
   const excedeStock = Boolean(productoSel) && cantidad > disponible;
 
-  function agregarOtro() {
-    if (!productoSel || cantidad <= 0) return;
-    setLineas((prev) => [
-      ...prev,
-      { producto_id: productoSel.id, nombre: productoSel.nombre, precio: Number(productoSel.precio), cantidad },
-    ]);
+  // Una venta a crédito sin cliente no se puede cobrar — el backend también lo
+  // valida, pero avisarlo aquí evita el viaje de ida y vuelta al servidor.
+  const faltaCliente = metodoPago === 'credito' && !clienteId;
+
+  const productosFiltrados = useMemo(() => {
+    const q = normalizar(busqueda);
+    return productos.filter((p) => {
+      if (filtro !== 'todos' && estadoStock(p).clave !== filtro) return false;
+      if (q && !normalizar(p.nombre).includes(q)) return false;
+      return true;
+    });
+  }, [productos, busqueda, filtro]);
+
+  function seleccionar(producto) {
+    setProductoId(producto.id);
+    setCantidad(1);
+  }
+
+  function cambiarProducto() {
     setProductoId('');
     setCantidad(1);
+  }
+
+  function agregarOtro() {
+    if (!productoSel || cantidad <= 0) return;
+    setLineas((prev) => [...prev, { producto_id: productoSel.id, nombre: productoSel.nombre, precio: Number(productoSel.precio), cantidad }]);
+    cambiarProducto();
+    setBusqueda('');
   }
 
   function quitarLinea(indice) {
@@ -60,17 +99,23 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
 
   async function registrar() {
     const items = lineasEfectivas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad }));
-    const ok = await onRegistrar(items);
+    const ok = await onRegistrar({
+      items,
+      metodo_pago: metodoPago,
+      cliente_id: metodoPago === 'credito' ? clienteId : undefined,
+    });
     if (ok) {
       setLineas([]);
-      setProductoId('');
-      setCantidad(1);
+      cambiarProducto();
+      setBusqueda('');
+      setMetodoPago('efectivo');
+      setClienteId(null);
     }
   }
 
   if (productos.length === 0) {
     return (
-      <Card>
+      <Card className="shadow-md">
         <EmptyState
           emoji="📦"
           titulo="Primero necesitas productos"
@@ -87,38 +132,36 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
   }
 
   return (
-    <Card>
+    <Card className="shadow-md">
       <div className="flex items-center gap-2 mb-3">
         <ShoppingCart className="h-4 w-4 text-verde" />
         <span className="text-[13px] font-semibold text-negro">Registrar una venta</span>
       </div>
 
       <div className="flex flex-col gap-3">
-        <Select
-          label="Producto"
-          value={productoId}
-          onChange={(e) => {
-            setProductoId(e.target.value);
-            setCantidad(1);
-          }}
-        >
-          <option value="">Elige un producto…</option>
-          {productos.map((p) => (
-            <option key={p.id} value={p.id} disabled={Number(p.stock_actual) <= 0}>
-              {p.nombre} — {formatoCOP(p.precio)}
-              {Number(p.stock_actual) <= 0 ? ' (sin stock)' : ` (${p.stock_actual} disp.)`}
-            </option>
-          ))}
-        </Select>
-
         {productoSel && (
           <div>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="text-xs font-medium text-gris">Producto</label>
+              <button type="button" onClick={cambiarProducto} className="text-[11px] text-verde font-medium">
+                Cambiar producto
+              </button>
+            </div>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl border-[1.5px] border-verde bg-verde-claro mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-medium text-negro truncate">{productoSel.nombre}</div>
+                <div className="text-[11px] text-gris">
+                  {formatoCOP(productoSel.precio)} · {disponible} disponible{disponible === 1 ? '' : 's'}
+                </div>
+              </div>
+            </div>
+
             <label className="text-xs font-medium text-gris">Cantidad</label>
             <div className="flex items-center gap-3 mt-1.5">
               <button
                 type="button"
                 onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                className="h-11 w-11 rounded-xl border-[1.5px] border-borde text-negro flex items-center justify-center active:scale-95"
+                className="h-11 w-11 rounded-xl bg-white border-[1.5px] border-borde text-negro flex items-center justify-center active:scale-95 shadow-sm"
                 aria-label="Quitar una unidad"
               >
                 <Minus className="h-4 w-4" />
@@ -129,12 +172,12 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
                 min="1"
                 value={cantidad}
                 onChange={(e) => setCantidad(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
-                className="flex-1 h-11 text-center rounded-xl border-[1.5px] border-borde text-[17px] font-semibold text-negro outline-none focus:border-verde"
+                className="flex-1 h-11 text-center rounded-xl border-[1.5px] border-borde bg-white text-[17px] font-semibold text-negro outline-none focus:border-verde"
               />
               <button
                 type="button"
                 onClick={() => setCantidad((c) => c + 1)}
-                className="h-11 w-11 rounded-xl border-[1.5px] border-borde text-negro flex items-center justify-center active:scale-95"
+                className="h-11 w-11 rounded-xl bg-white border-[1.5px] border-borde text-negro flex items-center justify-center active:scale-95 shadow-sm"
                 aria-label="Agregar una unidad"
               >
                 <Plus className="h-4 w-4" />
@@ -149,8 +192,77 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
           </div>
         )}
 
+        {!productoSel && (
+          <div>
+            <div className="relative">
+              <Search className="h-4 w-4 text-gris absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar producto…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-9 pr-9 py-3 rounded-xl border-[1.5px] border-borde bg-white text-[15px] text-negro outline-none transition focus:border-verde"
+              />
+              {busqueda && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gris"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-1.5 mt-2.5 mb-2.5">
+              {FILTROS.map((f) => (
+                <button
+                  key={f.clave}
+                  type="button"
+                  onClick={() => setFiltro(f.clave)}
+                  className={`px-3 py-1.5 rounded-full border-[1.5px] text-[12px] font-medium transition ${
+                    filtro === f.clave
+                      ? 'bg-verde border-verde text-white'
+                      : 'bg-white border-borde text-gris hover:border-verde-suave'
+                  }`}
+                >
+                  {f.etiqueta}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto -mx-1 px-1">
+              {productosFiltrados.length === 0 && (
+                <div className="text-[12px] text-gris text-center py-6">
+                  Ningún producto coincide con "{busqueda}".
+                </div>
+              )}
+              {productosFiltrados.map((p) => {
+                const estado = estadoStock(p);
+                const sinStock = Number(p.stock_actual) <= 0;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={sinStock}
+                    onClick={() => seleccionar(p)}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl border-[1.5px] border-borde bg-white text-left transition hover:border-verde-suave disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-medium text-negro truncate">{p.nombre}</div>
+                      <div className="text-[11px] text-gris">{formatoCOP(p.precio)}</div>
+                    </div>
+                    <Badge tone={estado.tone}>{estado.texto}</Badge>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {lineasEfectivas.length > 0 && (
-          <div className="bg-arena rounded-xl p-3">
+          <div className="bg-arena rounded-2xl p-3.5 shadow-sm">
             <div className="text-[11px] text-gris mb-2">Esta venta</div>
             <div className="flex flex-col gap-1.5">
               {lineas.map((l, i) => (
@@ -180,6 +292,40 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
           </div>
         )}
 
+        {lineasEfectivas.length > 0 && (
+          <div>
+            <label className="text-xs font-medium text-gris mb-1.5 block">Método de pago</label>
+            <div className="flex gap-1.5">
+              {METODOS_PAGO.map((m) => (
+                <button
+                  key={m.clave}
+                  type="button"
+                  onClick={() => {
+                    setMetodoPago(m.clave);
+                    if (m.clave === 'efectivo') setClienteId(null);
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl border-[1.5px] text-[13px] font-medium transition ${
+                    metodoPago === m.clave
+                      ? 'bg-verde border-verde text-white'
+                      : 'bg-white border-borde text-gris hover:border-verde-suave'
+                  }`}
+                >
+                  {m.etiqueta}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lineasEfectivas.length > 0 && metodoPago === 'credito' && (
+          <ClientePicker
+            clientes={clientes}
+            clienteId={clienteId}
+            onSeleccionar={setClienteId}
+            onCrearCliente={onCrearCliente}
+          />
+        )}
+
         {error && <Alert tone="error">{error}</Alert>}
 
         <div className="flex gap-2">
@@ -195,12 +341,16 @@ export default function RegistrarVenta({ productos, guardando, error, onRegistra
           <Button
             className="flex-[2]"
             loading={guardando}
-            disabled={lineasEfectivas.length === 0 || excedeStock}
+            disabled={lineasEfectivas.length === 0 || excedeStock || faltaCliente}
             onClick={registrar}
           >
-            Cobrar {total > 0 ? formatoCOP(total) : ''}
+            {metodoPago === 'credito' ? 'Registrar a crédito' : 'Cobrar'} {total > 0 ? formatoCOP(total) : ''}
           </Button>
         </div>
+
+        {faltaCliente && (
+          <div className="text-[11px] text-rojo text-center -mt-1.5">Elige o crea un cliente para vender a crédito.</div>
+        )}
       </div>
     </Card>
   );

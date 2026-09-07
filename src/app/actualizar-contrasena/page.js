@@ -1,3 +1,4 @@
+// frontend/src/app/actualizar-contrasena/page.js
 'use client';
 
 import { useState } from 'react';

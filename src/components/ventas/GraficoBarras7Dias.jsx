@@ -1,3 +1,4 @@
+/* frontend/src/components/ventas/GraficoBarras7Dias.jsx */
 'use client';
 
 import { useState } from 'react';

@@ -1,3 +1,4 @@
+// frontend/src/app/(app)/analizar/page.js
 'use client';
 
 import { useState } from 'react';

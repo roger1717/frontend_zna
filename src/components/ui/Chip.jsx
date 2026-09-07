@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/Chip.jsx */
 export default function Chip({ children, active = false, onClick, disabled = false }) {
   return (
     <button
@@ -6,8 +7,8 @@ export default function Chip({ children, active = false, onClick, disabled = fal
       disabled={disabled}
       className={`px-4 py-2 rounded-full border-[1.5px] text-[13px] font-sans transition disabled:opacity-40 disabled:cursor-not-allowed ${
         active
-          ? 'bg-verde border-verde text-white font-medium'
-          : 'bg-white border-borde text-gris hover:border-verde-suave'
+          ? 'bg-verde border-verde text-white font-medium shadow-sm'
+          : 'bg-white border-borde text-gris hover:border-verde-suave '
       }`}
     >
       {children}

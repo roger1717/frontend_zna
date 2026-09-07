@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/ScoreRing.jsx */
 'use client';
 
 const RADIO = 26;

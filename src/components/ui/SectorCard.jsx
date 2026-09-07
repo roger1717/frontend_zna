@@ -1,3 +1,4 @@
+/* frontend/src/components/ui/SectorCard.jsx */
 export default function SectorCard({ emoji, nombre, active = false, onClick }) {
   return (
     <button
