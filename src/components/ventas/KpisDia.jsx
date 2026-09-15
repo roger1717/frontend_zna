@@ -1,7 +1,6 @@
 /* frontend/src/components/ventas/KpisDia.jsx */
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import { formatoCOP, formatoCOPCorto, formatoNumero, formatoPorcentaje } from '@/lib/formato';
 
 function Kpi({ etiqueta, valor, ayuda }) {
@@ -14,7 +13,7 @@ function Kpi({ etiqueta, valor, ayuda }) {
   );
 }
 
-export default function KpisDia({ kpis, demo }) {
+export default function KpisDia({ kpis }) {
   const k = kpis || {};
   const variacion = k.variacion_vs_ayer_pct;
   const subio = Number(variacion) > 0;
@@ -26,7 +25,6 @@ export default function KpisDia({ kpis, demo }) {
       <div className="bg-verde rounded-2xl p-5 shadow-md">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[12px] text-white/70">Vendido hoy</span>
-          <Badge tone={demo ? 'azul' : 'verde'}>{demo ? 'Ejemplo' : 'Dato real'}</Badge>
         </div>
         <div className="font-display font-extrabold text-white text-[32px] leading-none tracking-tight">
           {formatoCOP(k.ventas_hoy)}

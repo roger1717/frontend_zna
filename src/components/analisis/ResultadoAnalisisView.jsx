@@ -9,7 +9,6 @@ import Badge from '@/components/ui/Badge';
 import BadgeEstimado from '@/components/ui/BadgeEstimado';
 import BarraProgreso from '@/components/ui/BarraProgreso';
 import ScoreRing from '@/components/ui/ScoreRing';
-import Alert from '@/components/ui/Alert';
 
 // Vista del resultado de la Fase 1 (Estudio de Mercado). Renderiza EXACTAMENTE
 // el contrato del backend de Fase 1 (score + metricas + tips + competidores),
@@ -37,7 +36,7 @@ const BARRAS = [
   { clave: 'demanda', etiqueta: 'Demanda estimada', color: '#2a6b50' },
 ];
 
-export default function ResultadoAnalisisView({ analisis, contexto, demo }) {
+export default function ResultadoAnalisisView({ analisis, contexto }) {
   const router = useRouter();
 
   const metricas = analisis.metricas || {};
@@ -66,12 +65,6 @@ export default function ResultadoAnalisisView({ analisis, contexto, demo }) {
         </Button>
       </div>
 
-      {demo && (
-        <Alert tone="demo">
-          Datos de ejemplo — todavía no hay claves reales conectadas (Google Places / IA). Así se verá
-          con datos reales de tu zona.
-        </Alert>
-      )}
 
       {/* Puntaje + resumen corto (el "texto corto" del PDF). */}
       <div className="flex flex-col items-center gap-3 py-2">
@@ -149,7 +142,7 @@ export default function ResultadoAnalisisView({ analisis, contexto, demo }) {
         </div>
       </div>
 
-      {!iaReal && !demo && (
+      {!iaReal && (
         <div className="text-[11px] text-gris text-center">
           Las métricas y recomendaciones son estimaciones de IA, no datos oficiales.
         </div>

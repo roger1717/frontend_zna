@@ -1,10 +1,6 @@
 // Espejo del backend — src/services/googlePlaces.js (SECTORES_VALIDOS),
-// src/config/planes.js (RADIOS/PLANES). Si el backend cambia esta lista,
-// hay que actualizar esto también; lo dejamos así (en vez de pedirle la
-// lista al backend en cada carga) porque son datos que casi no cambian
-// y así la pantalla de "Nuevo análisis" no depende de una llamada extra.
+// src/config/planes.js (RADIOS/PLANES). El backend es la fuente de verdad.
 
-// archivo src/lib/constants.js
 export const SECTORES = [
   { id: 'tienda_barrio', emoji: '🛒', nombre: 'Tienda de barrio' },
   { id: 'restaurante', emoji: '🍽️', nombre: 'Restaurante' },
@@ -38,65 +34,37 @@ export function emojiSector(id) {
   return SECTORES.find((s) => s.id === id)?.emoji ?? '🏪';
 }
 
-// Radios seleccionables por el usuario (planes pagos). El plan Gratis
-// siempre usa 200m fijo — eso lo decide el backend, no se ofrece como
-// opción aquí (ver RADIO_GRATIS_METROS).
-export const RADIOS = [
-  { metros: 500, etiqueta: '500 m' },
-  { metros: 1000, etiqueta: '1 km' },
-  { metros: 2000, etiqueta: '2 km' },
-  { metros: 5000, etiqueta: '5 km' },
-];
+// Plan de prueba: radio máximo 200 m (el backend rechaza más).
+export const RADIOS = [{ metros: 200, etiqueta: '200 m' }];
 
-export const RADIO_GRATIS_METROS = 200;
-export const LIMITE_ANALISIS_GRATIS_MES = 2;
+export const RADIO_PRUEBA_METROS = 200;
+/** @deprecated usar RADIO_PRUEBA_METROS */
+export const RADIO_GRATIS_METROS = RADIO_PRUEBA_METROS;
 
-// Precios — deben coincidir con src/config/planes.js del backend. El
-// backend es quien de verdad calcula el monto a cobrar (nunca el
-// frontend); esto es solo para mostrar la tabla de precios.
+export const LIMITE_ANALISIS_PRUEBA = 1;
+export const LIMITE_PRODUCTOS_PRUEBA = 5;
+export const LIMITE_SERVICIOS_PRUEBA = 1;
+/** @deprecated usar LIMITE_ANALISIS_PRUEBA */
+export const LIMITE_ANALISIS_GRATIS_MES = LIMITE_ANALISIS_PRUEBA;
+
+// Espejo de backend/src/config/planes.js — piloto: un solo plan.
 export const PLANES = [
   {
-    id: 'gratis',
-    nombre: 'Gratis',
+    id: 'prueba',
+    nombre: 'Prueba',
     precio: '$0',
     periodo: '',
-    descripcion: 'Para evaluar antes de decidir',
-    caracteristicas: ['2 análisis por mes', 'Radio fijo de 200 m', 'Solo puntaje general'],
-    destacado: false,
-  },
-  {
-    id: 'informe',
-    nombre: 'Informe',
-    precio: '$12.900',
-    periodo: 'pago único',
-    descripcion: 'Un análisis completo, una sola vez',
+    descripcion: 'Plan de prueba del piloto',
     caracteristicas: [
-      'Análisis completo (puntaje, oportunidades, informe detallado)',
-      'Verificador de nombre',
-      'Sin suscripción',
-    ],
-    destacado: false,
-  },
-  {
-    id: 'pro_individual',
-    nombre: 'Pro individual',
-    precio: '$39.900',
-    periodo: '/mes',
-    descripcion: 'Para quien ya decidió o ya abrió',
-    caracteristicas: [
-      'Análisis completos sin límite',
-      'Informe detallado siempre',
-      'Historial completo en la nube',
+      '1 análisis de zona',
+      'Hasta 5 productos',
+      '1 servicio',
+      'Radio máximo 200 m',
     ],
     destacado: true,
   },
-  {
-    id: 'equipo',
-    nombre: 'Equipo',
-    precio: '$89.900',
-    periodo: '/mes',
-    descripcion: 'Todo Pro + tu equipo de trabajo',
-    caracteristicas: ['Todo lo de Pro individual', 'Hasta 3 usuarios de tu equipo'],
-    destacado: false,
-  },
 ];
+
+// Nicho libre: cuando el usuario no encuentra su negocio en la lista, escribe
+// su propio nicho y se envía como sector: SECTOR_PERSONALIZADO + nicho_personalizado.
+export const SECTOR_PERSONALIZADO = 'personalizado';

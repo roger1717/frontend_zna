@@ -1,13 +1,27 @@
-// frontend/src/app/planes/page.js
+// frontend/src/app/(app)/planes/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { iniciarPago, obtenerCatalogoPlanes } from '@/lib/api';
+import { iniciarPago, obtenerCatalogoPlanes, ApiError } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
+
+// Carga dinámica del Widget de pago de Wompi (una sola vez).
+function cargarScriptWompi() {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && window.Widget) return resolve(window.Widget);
+    const s = document.createElement('script');
+    s.src = 'https://checkout.wompi.co/v1/widget.js';
+    s.async = true;
+    s.onload = () =>
+      window.Widget ? resolve(window.Widget) : reject(new Error('No se pudo cargar el widget de pago.'));
+    s.onerror = () => reject(new Error('No se pudo cargar el widget de pago.'));
+    document.head.appendChild(s);
+  });
+}
 
 export default function PlanesPage() {
   const { token } = useAuth();
@@ -32,17 +46,41 @@ export default function PlanesPage() {
       });
   }, [token]);
 
+  async function abrirWidget(checkout) {
+    const Widget = await cargarScriptWompi();
+    const widget = new Widget({
+      target: 'zonapp-widget',
+      publicKey: checkout.publicKey,
+      currency: checkout.currency,
+      amountInCents: checkout.amountInCents,
+      reference: checkout.reference,
+      signature: { integrity: checkout.signatureIntegrity },
+      redirectUrl: checkout.redirectUrl,
+      customerEmail: checkout.customerEmail,
+      sandbox: checkout.sandbox,
+    });
+    widget.open();
+  }
+
   async function elegirPlan(planId) {
     setError('');
     setCargando(planId);
     try {
       const datos = await iniciarPago(planId, token);
-      if (!datos.url) {
-        throw new Error('No se pudo obtener la URL de pago. Verifica la configuración de Wompi.');
+      const checkout = datos?.checkout;
+      if (!checkout) {
+        throw new ApiError('Pagos no disponibles todavía.', 503);
       }
-      window.location.href = datos.url; // Redirige a Wompi
+      // Cuando el backend tenga claves de Wompi, esto abre el Widget de pago.
+      await abrirWidget(checkout);
     } catch (err) {
-      setError(err.message || 'No se pudo iniciar el pago.');
+      if (err instanceof ApiError && err.status === 503) {
+        setError(
+          '⏳ Pagos próximamente: estamos esperando las claves de Wompi del cliente. Tu plan actual sigue activo.'
+        );
+      } else {
+        setError(err.message || 'No se pudo iniciar el pago.');
+      }
     } finally {
       setCargando(null);
     }
@@ -68,7 +106,10 @@ export default function PlanesPage() {
     <>
       <div>
         <div className="font-display font-bold text-lg text-negro mb-1">Planes y pagos</div>
-        <div className="text-[13px] text-gris leading-relaxed">Elige el plan que mejor se ajusta a tu negocio.</div>
+        <div className="text-[13px] text-gris leading-relaxed">
+          Por ahora solo está activo el plan de prueba. Los planes de pago se activarán cuando el
+          cliente entregue las claves de Wompi.
+        </div>
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -81,7 +122,7 @@ export default function PlanesPage() {
           >
             {plan.destacado && (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-verde text-white text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
-                Más elegido
+                Plan actual
               </div>
             )}
             <div className="flex items-baseline justify-between mb-1">
@@ -93,14 +134,15 @@ export default function PlanesPage() {
             </div>
             <div className="text-xs text-gris mb-3">{plan.descripcion}</div>
             <div className="flex flex-col gap-1.5 mb-4">
-              {plan.caracteristicas && plan.caracteristicas.map((c) => (
-                <div key={c} className="flex items-start gap-2 text-[12px] text-negro">
-                  <Check className="h-3.5 w-3.5 text-verde flex-shrink-0 mt-0.5" />
-                  {c}
-                </div>
-              ))}
+              {plan.caracteristicas &&
+                plan.caracteristicas.map((car) => (
+                  <div key={car} className="flex items-start gap-2 text-[12px] text-negro">
+                    <Check className="h-3.5 w-3.5 text-verde flex-shrink-0 mt-0.5" />
+                    {car}
+                  </div>
+                ))}
             </div>
-            {plan.id === 'gratis' ? (
+            {plan.precio === '$0' || plan.id === 'prueba' ? (
               <div className="text-center text-[12px] text-gris py-2">Tu plan al crear la cuenta</div>
             ) : (
               <Button
@@ -115,6 +157,9 @@ export default function PlanesPage() {
           </Card>
         ))}
       </div>
+
+      {/* Wompi inserta su widget aquí cuando hay planes de pago */}
+      <div id="zonapp-widget" className="hidden" />
     </>
   );
 }

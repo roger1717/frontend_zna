@@ -25,7 +25,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className={`${syne.variable} ${inter.variable}`}>
-      <body className="min-h-screen bg-arena text-negro antialiased">
+      <body className="min-h-screen text-negro antialiased"
+      style={{ background: 'linear-gradient(160deg, var(--color-verde-oscuro) 0%, var(--color-verde) 55%, var(--color-verde-suave) 100%)' }}>
         <AuthProvider>
           <AnalysisProvider>{children}</AnalysisProvider>
         </AuthProvider>

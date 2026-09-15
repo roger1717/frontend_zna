@@ -44,7 +44,6 @@ export default function HistorialDetallePage() {
     <ResultadoAnalisisView
       analisis={detalle.resultado}
       contexto={{ zona: detalle.zona, sector: detalle.sector, radioMetros: detalle.radio_metros }}
-      demo={detalle.demo}
     />
   );
 }

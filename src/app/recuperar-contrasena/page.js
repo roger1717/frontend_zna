@@ -10,7 +10,7 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
 export default function RecuperarContrasenaPage() {
-  const { recuperarContrasena, modoDemo } = useAuth();
+  const { recuperarContrasena } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [enviado, setEnviado] = useState(false);
@@ -40,12 +40,6 @@ export default function RecuperarContrasenaPage() {
           Si <span className="font-semibold text-negro">{email}</span> tiene una cuenta, te enviamos
           un enlace para crear una nueva contraseña. Puede tardar un par de minutos.
         </p>
-        {modoDemo && (
-          <Alert tone="demo" className="mb-4">
-            Modo demo: no hay correo real. Con Supabase conectado, aquí llegaría el enlace de
-            recuperación.
-          </Alert>
-        )}
         <Link href="/login">
           <Button variant="outline">Volver a iniciar sesión</Button>
         </Link>
@@ -59,13 +53,6 @@ export default function RecuperarContrasenaPage() {
       <p className="text-[13px] text-gris mb-5">
         Escribe tu correo y te enviamos un enlace para crear una nueva.
       </p>
-
-      {modoDemo && (
-        <Alert tone="demo" className="mb-4">
-          Modo demo: no hay una cuenta de Supabase conectada todavía, así que no se envía un correo
-          real.
-        </Alert>
-      )}
 
       <form onSubmit={manejarSubmit} className="flex flex-col gap-3.5">
         <Input

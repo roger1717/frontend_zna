@@ -5,7 +5,7 @@
 import { supabaseConfigurado } from './supabaseClient';
 import { permiteDatosDeEjemplo } from './erroresApi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const EVENTO_SESION_VENCIDA = 'zonapp:sesion-vencida';
 
@@ -13,6 +13,28 @@ function avisarSesionVencida() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(EVENTO_SESION_VENCIDA));
   }
+}
+
+// Valida que una sesión guardada siga viva en el BACKEND (GET /api/perfil).
+// Devuelve false SOLO cuando el servidor responde 401 (token vencido o
+// invalidado). Si el backend está caído o inalcanzable (red, servidor apagado),
+// devuelve true: no se cierra la sesión por una caída transitoria.
+//
+// Por qué existe: la sesión de Supabase se guarda y se restaura sola, y eso es
+// igual para TODOS los usuarios (superusuario incluido). Con esta verificación,
+// cuando esa sesión guardada ya no vale, la app no deja "entrar sin login":
+// limpia la sesión y devuelve a la pantalla de iniciar sesión.
+export async function validarSesion(token) {
+  if (!token) return false;
+  let respuesta;
+  try {
+    respuesta = await fetch(`${API_URL}/api/perfil`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return true;
+  }
+  return respuesta.status !== 401;
 }
 
 export class ApiError extends Error {
@@ -61,6 +83,14 @@ export async function obtenerPerfil(token) {
   } catch {
     return { perfil: null, demo: false };
   }
+}
+
+export async function actualizarPerfil(payload, token) {
+  return apiFetch('/api/perfil', { method: 'PATCH', body: payload, token });
+}
+
+export async function cambiarContrasena(payload, token) {
+  return apiFetch('/api/perfil/cambiar-contrasena', { method: 'POST', body: payload, token });
 }
 
 // --- Inventario (Modo Producción Real) ---
@@ -297,6 +327,30 @@ export async function obtenerHistorial({ pagina = 1, porPagina = 10 } = {}, toke
   }
 }
 
+// --- Detalle de un análisis guardado ---
+// El endpoint de lista ya devuelve `resultado` y `competidores` completos por
+// fila, así que para ver un análisis del historial basta con buscarlo en las
+// primeras páginas (el piloto maneja pocos registros). Si algún día hay
+// muchos, se añade GET /api/historial/:id en el backend y aquí se cambia el
+// fetch por uno directo.
+export async function obtenerHistorialDetalle(id, token) {
+  try {
+    const { items } = await apiFetch('/api/historial?pagina=1&porPagina=50', { token });
+    const encontrado = (items || []).find((i) => i.id === id);
+    if (!encontrado) return null;
+    return {
+      zona: encontrado.zona,
+      sector: encontrado.sector,
+      radio_metros: encontrado.radio_metros,
+      resultado: encontrado.resultado,
+      demo: false,
+    };
+  } catch (err) {
+    if (esErrorSinBackend(err)) return null;
+    throw err;
+  }
+}
+
 // --- Análisis de zona (Estudio de Mercado) ---
 export async function analizarZona(payload, token) {
   try {
@@ -312,4 +366,10 @@ export async function analizarZona(payload, token) {
     }
     throw err;
   }
+}
+// --- Maps: autocompletar direcciones para el selector de zona ---
+export async function autocompletarDirecciones(query, token) {
+  const q = encodeURIComponent((query || '').trim());
+  const resultado = await apiFetch(`/api/maps/autocomplete?q=${q}`, { token });
+  return resultado.sugerencias || [];
 }

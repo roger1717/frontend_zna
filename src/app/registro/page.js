@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
 export default function RegistroPage() {
-  const { registro, modoDemo, user, loading } = useAuth();
+  const { registro, user, loading } = useAuth();
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -66,13 +66,7 @@ export default function RegistroPage() {
   return (
     <AuthLayout>
       <h1 className="font-display font-extrabold text-xl text-negro mb-1">Crea tu cuenta</h1>
-      <p className="text-[13px] text-gris mb-5">Empieza gratis — 2 análisis por mes.</p>
-
-      {modoDemo && (
-        <Alert tone="demo" className="mb-4">
-          Modo demo: no hay una cuenta de Supabase conectada todavía. Se crea una sesión local en tu navegador.
-        </Alert>
-      )}
+      <p className="text-[13px] text-gris mb-5">Empieza con el plan de prueba: 1 análisis, 5 productos y 1 servicio.</p>
 
       <form onSubmit={manejarSubmit} className="flex flex-col gap-3.5">
         <Input label="Nombre" placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />

@@ -15,7 +15,7 @@ import Alert from '@/components/ui/Alert';
 // updateUser() puede fijar la nueva contraseña. Por eso es una ruta pública
 // (fuera del grupo (app)): el usuario aún no "inició sesión" normalmente.
 export default function ActualizarContrasenaPage() {
-  const { actualizarContrasena, modoDemo } = useAuth();
+  const { actualizarContrasena } = useAuth();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -64,12 +64,6 @@ export default function ActualizarContrasenaPage() {
     <AuthLayout>
       <h1 className="font-display font-extrabold text-xl text-negro mb-1">Nueva contraseña</h1>
       <p className="text-[13px] text-gris mb-5">Escribe la nueva contraseña de tu cuenta.</p>
-
-      {modoDemo && (
-        <Alert tone="demo" className="mb-4">
-          Modo demo: sin Supabase conectado no hay un enlace de recuperación real que validar.
-        </Alert>
-      )}
 
       <form onSubmit={manejarSubmit} className="flex flex-col gap-3.5">
         <Input

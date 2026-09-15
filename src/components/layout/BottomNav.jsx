@@ -2,50 +2,41 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home, Receipt, Package, Search, MessageCircle, User } from 'lucide-react';
 
-// Nota: en el diseño original estos 5 espacios eran Inicio/Analizar/
-// Tienda Virtual/Verificador/Chat. Tienda Virtual y Chat no existen en
-// el backend (ver decisión del usuario), así que esos dos espacios se
-// reasignaron a Historial y Perfil — pantallas que en el diseño original
-// no tenían ningún botón que llevara a ellas.
-//
-// En la sub-fase 3.6 entró **Ventas** y salió **Historial** (riesgo R6 del plan
-// de la Fase 3): seguimos en 5 ítems, que es lo que cabe cómodo en 360 px.
-// Ventas se usa varias veces al día; el historial de análisis se consulta una vez
-// cada tanto y sigue a un toque desde Inicio ("Mis análisis").
-
+// Navegación inferior, siguiendo el patrón de la maqueta original
+// (zonapp-pwa): iconos lucide y el ítem activo en verde de marca sobre
+// fondo verde-claro con trazo más grueso.
 const ITEMS = [
-    { href: '/', label: 'Inicio', icon: '🏠' },
-    { href: '/ventas', label: 'Ventas', icon: '🧾' },
-    { href: '/inventario', label: 'Inventario', icon: '📦' },
-    { href: '/analizar', label: 'Analizar', icon: '🔍' },
-    { href: '/chat', label: 'Asistente', icon: '💬' },
-    { href: '/perfil', emoji: '👤', etiqueta: 'Perfil' },
-  ];
+  { href: '/', label: 'Inicio', Icon: Home },
+  { href: '/ventas', label: 'Ventas', Icon: Receipt },
+  { href: '/inventario', label: 'Inventario', Icon: Package },
+  { href: '/analizar', label: 'Analizar', Icon: Search },
+  { href: '/chat', label: 'Asistente', Icon: MessageCircle },
+  { href: '/perfil', label: 'Perfil', Icon: User },
+];
 
-  export default function BottomNav() {
-    const pathname = usePathname();
-  
-    return (
-      <div className="bg-white border-t border-borde flex px-2 py-2 pb-safe">
-        {ITEMS.map((item) => {
-          const active =
-            pathname === item.href ||
-            (item.href !== '/' && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl ${
-                active ? 'text-verde bg-verde-claro' : 'text-gris'
-              }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="text-[10px] font-semibold mt-0.5">{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    );
-  }
-  
+export default function BottomNav() {
+  const pathname = usePathname();
+
+  return (
+    <div className="bg-white border-t border-borde flex px-2 py-2 pb-safe">
+      {ITEMS.map(({ href, label, Icon }) => {
+        const active =
+          pathname === href || (href !== '/' && pathname.startsWith(href));
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl ${
+              active ? 'text-verde bg-verde-claro' : 'text-gris'
+            }`}
+          >
+            <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            <span className="text-[10px] font-semibold mt-0.5">{label}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

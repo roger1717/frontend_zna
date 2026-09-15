@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
 
 export default function LoginPage() {
-  const { login, modoDemo, user, loading } = useAuth();
+  const { login, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,12 +41,6 @@ export default function LoginPage() {
     <AuthLayout>
       <h1 className="font-display font-extrabold text-xl text-negro mb-1">Inicia sesión</h1>
       <p className="text-[13px] text-gris mb-5">Analiza tu zona antes de invertir.</p>
-
-      {modoDemo && (
-        <Alert tone="demo" className="mb-4">
-          Modo demo: no hay una cuenta de Supabase conectada todavía. Cualquier correo y contraseña te deja entrar.
-        </Alert>
-      )}
 
       <form onSubmit={manejarSubmit} className="flex flex-col gap-3.5">
         <Input

@@ -9,7 +9,6 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
-import Alert from '@/components/ui/Alert';
 
 const POR_PAGINA = 10;
 
@@ -31,10 +30,6 @@ export default function HistorialPage() {
   return (
     <>
       <div className="font-display font-bold text-lg text-negro">Mis análisis</div>
-
-      {datos?.demo && (
-        <Alert tone="demo">Datos de ejemplo — conecta Supabase para ver tu historial real.</Alert>
-      )}
 
       {cargando && <Spinner label="Cargando historial..." />}
 

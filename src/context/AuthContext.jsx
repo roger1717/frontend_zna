@@ -4,31 +4,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase, supabaseConfigurado } from '@/lib/supabaseClient';
-import { EVENTO_SESION_VENCIDA } from '@/lib/api';
+import { EVENTO_SESION_VENCIDA, validarSesion } from '@/lib/api';
 
 const AuthContext = createContext(null);
-
-const CLAVE_DEMO = 'zonapp_demo_sesion';
 
 // Tope para recuperar la sesión al arrancar. Si Supabase no responde en este
 // tiempo, la app entra como anónimo en vez de quedarse cargando.
 const TIEMPO_LIMITE_MS = 8000;
 
-function leerSesionDemo() {
-  if (typeof window === 'undefined') return null;
-  try {
-    return JSON.parse(localStorage.getItem(CLAVE_DEMO) || 'null');
-  } catch {
-    return null;
-  }
-}
-
-// Sin claves reales de Supabase, la app entera funciona en "modo demo":
-// cualquier correo/contraseña "inicia sesión" localmente, guardado en
-// localStorage, para que se puedan ver y probar las 8 pantallas sin
-// depender de un proyecto de Supabase real. La integración real
-// (supabase-js) queda lista — apenas pongas las claves en .env.local,
-// esto pasa a usarlas automáticamente, sin tocar código.
+// La app NO tiene modo demo: nadie entra con una sesión local de mentira. El
+// usuario entra únicamente con una cuenta real (Supabase Auth) y cada token lo
+// valida el backend. Sin Supabase configurado, el login no deja pasar a nadie.
+// Este archivo es la única puerta de entrada de sesión.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -36,11 +23,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!supabaseConfigurado) {
-      const sesion = leerSesionDemo();
-      if (sesion) {
-        setUser(sesion.user);
-        setToken(sesion.token);
-      }
+      // Sin claves reales de Supabase no hay sesión posible: el usuario se
+      // queda en el login y el intento de entrar termina en error. Ya no
+      // existe modo demo.
       setLoading(false);
       return;
     }
@@ -56,11 +41,28 @@ export function AuthProvider({ children }) {
         setTimeout(() => rechazar(new Error('Supabase no respondió a tiempo.')), TIEMPO_LIMITE_MS),
       ),
     ])
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) throw error;
         if (!vigente) return;
-        setUser(data.session?.user ?? null);
-        setToken(data.session?.access_token ?? null);
+        const sesion = data.session;
+
+        // La sesión guardada se restaura sola, igual para TODOS los usuarios
+        // (superusuario incluido). Antes de entrar se valida contra el backend
+        // (GET /api/perfil): si el token ya no vale (401) se cierra la sesión
+        // local y se pide iniciar sesión de nuevo, aunque Supabase todavía la
+        // recuerde. Si el backend está caído, validarSesion devuelve true y no
+        // se echa al usuario por una caída transitoria.
+        if (sesion && !(await validarSesion(sesion.access_token))) {
+          console.warn('[auth] sesión guardada rechazada por el backend, se pide login de nuevo.');
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          if (!vigente) return;
+          setUser(null);
+          setToken(null);
+          return;
+        }
+
+        setUser(sesion?.user ?? null);
+        setToken(sesion?.access_token ?? null);
       })
       .catch(async (err) => {
         // Caso típico: se corrió `supabase db reset` y el token guardado en el
@@ -115,12 +117,9 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    if (!email || !password) throw new Error('Ingresa correo y contraseña.');
-    const demoUser = { id: `demo-${email}`, email, nombre: email.split('@')[0] };
-    const sesion = { user: demoUser, token: 'demo-token' };
-    localStorage.setItem(CLAVE_DEMO, JSON.stringify(sesion));
-    setUser(demoUser);
-    setToken(sesion.token);
+    throw new Error(
+      'Supabase no está configurado. Agrega NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.local.'
+    );
   }, []);
 
   const registro = useCallback(async (email, password, nombre) => {
@@ -141,13 +140,9 @@ export function AuthProvider({ children }) {
       return { necesitaConfirmacion: false };
     }
 
-    if (!email || !password) throw new Error('Ingresa correo y contraseña.');
-    const demoUser = { id: `demo-${email}`, email, nombre: nombre || email.split('@')[0] };
-    const sesion = { user: demoUser, token: 'demo-token' };
-    localStorage.setItem(CLAVE_DEMO, JSON.stringify(sesion));
-    setUser(demoUser);
-    setToken(sesion.token);
-    return { necesitaConfirmacion: false };
+    throw new Error(
+      'Supabase no está configurado. Agrega NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.local.'
+    );
   }, []);
 
   // Paso 1 de "olvidé mi contraseña": Supabase envía un correo con un enlace que
@@ -155,7 +150,9 @@ export function AuthProvider({ children }) {
   const recuperarContrasena = useCallback(async (email) => {
     const limpio = (email || '').trim();
     if (!limpio) throw new Error('Ingresa tu correo electrónico.');
-    if (!supabaseConfigurado) return; // demo: no hay un correo real que enviar.
+    if (!supabaseConfigurado) {
+      throw new Error('Supabase no está configurado. No se puede enviar el correo de recuperación.');
+    }
     const redirectTo =
       typeof window !== 'undefined' ? `${window.location.origin}/actualizar-contrasena` : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(limpio, { redirectTo });
@@ -167,7 +164,9 @@ export function AuthProvider({ children }) {
     if (!password || password.length < 6) {
       throw new Error('La contraseña debe tener al menos 6 caracteres.');
     }
-    if (!supabaseConfigurado) return; // demo
+    if (!supabaseConfigurado) {
+      throw new Error('Supabase no está configurado. No se puede actualizar la contraseña.');
+    }
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw new Error(error.message);
   }, []);
@@ -175,8 +174,6 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     if (supabaseConfigurado) {
       await supabase.auth.signOut();
-    } else {
-      localStorage.removeItem(CLAVE_DEMO);
     }
     setUser(null);
     setToken(null);
@@ -188,7 +185,6 @@ export function AuthProvider({ children }) {
         user,
         token,
         loading,
-        modoDemo: !supabaseConfigurado,
         login,
         registro,
         logout,

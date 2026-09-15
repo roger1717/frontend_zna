@@ -16,7 +16,7 @@ import Spinner from '@/components/ui/Spinner';
 const ACCESOS = [
   { href: '/ventas', emoji: '🧾', titulo: 'Ventas', sub: 'Registra y mira tu día' },
   { href: '/inventario', emoji: '📦', titulo: 'Inventario', sub: 'Productos + Auditoría IA' },
-  { href: '/verificar-nombre', emoji: '🔎', titulo: 'Verificar nombre', sub: 'RUES + SIC + .co' },
+  { href: '/gastos', emoji: '💸', titulo: 'Gastos', sub: 'Tus egresos al día' },
   { href: '/historial', emoji: '📊', titulo: 'Mis análisis', sub: 'Consulta el historial' },
 ];
 
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   // mensaje de error en la pantalla de bienvenida.
   useEffect(() => {
     obtenerDashboard(token)
-      .then((d) => setVentasHoy({ ...d.kpis, demo: d.demo }))
+      .then((d) => setVentasHoy({ ...d.kpis }))
       .catch(() => setVentasHoy(null));
   }, [token]);
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
           <Card className="flex items-center gap-4 cursor-pointer hover:border-verde-suave transition">
             <div className="flex-1 min-w-0">
               <div className="text-[11px] text-gris mb-0.5">
-                Vendido hoy{ventasHoy.demo ? ' (ejemplo)' : ''}
+                Vendido hoy
               </div>
               <div className="font-display font-bold text-[22px] text-negro leading-none">
                 {formatoCOP(ventasHoy.ventas_hoy)}

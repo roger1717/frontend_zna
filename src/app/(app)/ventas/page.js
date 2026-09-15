@@ -34,7 +34,6 @@ export default function VentasPage() {
   const [dashboard, setDashboard] = useState(null);
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [demo, setDemo] = useState(false);
 
   const [errorRegistro, setErrorRegistro] = useState('');
   const [errorPantalla, setErrorPantalla] = useState('');
@@ -60,7 +59,6 @@ export default function VentasPage() {
       setVentas(lista.ventas || []);
       setClientes(clientesRes.clientes || []);
       setServicios(serviciosRes.servicios || []);
-      setDemo(Boolean(dash.demo));
     } catch {
       setErrorPantalla('No se pudieron cargar tus ventas. Revisa tu conexión e intenta de nuevo.');
     } finally {
@@ -139,13 +137,6 @@ export default function VentasPage() {
         </div>
       </div>
 
-      {demo && (
-        <Alert tone="demo">
-          Modo de ejemplo — estos números no son de tu negocio. Inicia sesión con una cuenta real
-          para registrar ventas de verdad.
-        </Alert>
-      )}
-
       {errorPantalla && <Alert tone="error">{errorPantalla}</Alert>}
 
       <RegistrarVenta
@@ -170,7 +161,7 @@ export default function VentasPage() {
         </Alert>
       )}
 
-      <KpisDia kpis={dashboard?.kpis} demo={demo} />
+      <KpisDia kpis={dashboard?.kpis} />
 
       <GraficoBarras7Dias serie={dashboard?.serie_7_dias || []} />
 

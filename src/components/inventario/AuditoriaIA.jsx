@@ -15,17 +15,11 @@ import EmptyState from '@/components/ui/EmptyState';
 export default function AuditoriaIA({ auditoria }) {
   if (!auditoria) return null;
 
-  const { resumen, alertas = [], estrategias = [], demo } = auditoria;
+  const { resumen, alertas = [], estrategias = [] } = auditoria;
   const sinHallazgos = alertas.length === 0 && estrategias.length === 0;
 
   return (
     <div className="flex flex-col gap-3">
-      {demo && (
-        <Alert tone="demo">
-          Auditoría de ejemplo — conecta la IA (Groq) y tu cuenta real para un análisis sobre tus datos.
-        </Alert>
-      )}
-
       <Card className="border-l-[3px] border-l-azul">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[13px] font-semibold text-negro">Resumen de la auditoría</span>

@@ -19,14 +19,12 @@ export default function CreditosPage() {
   const { token } = useAuth();
   const [saldos, setSaldos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [demo, setDemo] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     obtenerSaldosCredito(token)
       .then((r) => {
         setSaldos(r.saldos);
-        setDemo(r.demo);
       })
       .catch(() => setError('No se pudieron cargar los créditos.'))
       .finally(() => setCargando(false));
@@ -51,9 +49,6 @@ export default function CreditosPage() {
         </div>
       </div>
 
-      {demo && (
-        <Alert tone="demo">Modo de ejemplo — inicia sesión con una cuenta real para ver tus créditos de verdad.</Alert>
-      )}
       {error && <Alert tone="error">{error}</Alert>}
 
       {saldos.length > 0 && (
