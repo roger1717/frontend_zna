@@ -4,27 +4,26 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { obtenerDashboard, obtenerHistorial } from '@/lib/api';
+import { obtenerHistorial, obtenerNotaInicio } from '@/lib/api';
 import { nombreSector, emojiSector } from '@/lib/constants';
 import { formatoCOP, formatoNumero } from '@/lib/formato';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
+import ChipIA from '@/components/ui/ChipIA';
+import ChipReal from '@/components/ui/ChipReal';
 
-const ACCESOS = [
-  { href: '/ventas', emoji: '🧾', titulo: 'Ventas', sub: 'Registra y mira tu día' },
-  { href: '/inventario', emoji: '📦', titulo: 'Inventario', sub: 'Productos + Auditoría IA' },
-  { href: '/gastos', emoji: '💸', titulo: 'Gastos', sub: 'Tus egresos al día' },
-  { href: '/historial', emoji: '📊', titulo: 'Mis análisis', sub: 'Consulta el historial' },
-];
+// "sábado" → "Sábado" para el título de la tarjeta "Tu mejor día".
+function capitalizar(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function DashboardPage() {
   const { user, token } = useAuth();
-  const router = useRouter();
   const [recientes, setRecientes] = useState(null);
-  const [ventasHoy, setVentasHoy] = useState(null);
+  const [nota, setNota] = useState(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -33,76 +32,146 @@ export default function DashboardPage() {
       .finally(() => setCargando(false));
   }, [token]);
 
-  // Resumen del día en Inicio: es el dato que el tendero quiere ver al abrir la
-  // app. Si falla, simplemente no se muestra la tarjeta — no vale la pena un
-  // mensaje de error en la pantalla de bienvenida.
+  // Nota del Gerente IA para Inicio: saludo + resumen proactivo (ventas de la
+  // semana, comparación con la pasada y alerta de stock). Opcional: si el
+  // backend falla, el home sigue funcionando sin la tarjeta.
   useEffect(() => {
-    obtenerDashboard(token)
-      .then((d) => setVentasHoy({ ...d.kpis }))
-      .catch(() => setVentasHoy(null));
+    let activo = true;
+    obtenerNotaInicio(token).then((n) => {
+      if (activo) setNota(n);
+    });
+    return () => {
+      activo = false;
+    };
   }, [token]);
 
   return (
     <>
-      {ventasHoy && (
-        <Link href="/ventas">
-          <Card className="flex items-center gap-4 cursor-pointer hover:border-verde-suave transition">
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] text-gris mb-0.5">
-                Vendido hoy
-              </div>
-              <div className="font-display font-bold text-[22px] text-negro leading-none">
-                {formatoCOP(ventasHoy.ventas_hoy)}
-              </div>
-              <div className="text-[11px] text-gris mt-1">
-                {formatoNumero(ventasHoy.ordenes_hoy)}{' '}
-                {Number(ventasHoy.ordenes_hoy) === 1 ? 'venta' : 'ventas'} ·{' '}
-                {formatoCOP(ventasHoy.utilidad_hoy)} de ganancia
-              </div>
-            </div>
-            <span className="text-[11px] text-verde font-medium flex-shrink-0">Ver →</span>
-          </Card>
-        </Link>
+      <div className="mb-1">
+        <h1 className="font-display font-extrabold text-[26px] text-negro leading-tight tracking-tight">
+          {nota?.saludo ?? 'Tu negocio, al día'}
+        </h1>
+        <p className="text-[13px] text-gris mt-0.5">
+          {user?.nombre
+            ? `Este es el resumen de ${user.nombre}`
+            : 'Este es el resumen de tu negocio'}
+        </p>
+      </div>
+
+      {nota && (
+        <div className="bg-ia-fondo border border-ia/20 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-ia">
+              Nota de tu gerente IA · esta mañana
+            </span>
+            <ChipIA texto="Gerente IA" />
+          </div>
+          <div className="text-[14px] text-negro leading-relaxed">
+            {nota.kpis?.ingresos_semana > 0 ? (
+              <p>
+                Vas bien: esta semana llevas{' '}
+                <span className="font-semibold">{formatoCOP(nota.kpis.ingresos_semana)}</span>{' '}
+                en ventas
+                {nota.kpis.avance_semanal_pct != null && (
+                  nota.kpis.avance_semanal_pct >= 0
+                    ? `, ${formatoNumero(nota.kpis.avance_semanal_pct)}% más que la pasada`
+                    : `, ${formatoNumero(Math.abs(nota.kpis.avance_semanal_pct))}% menos que la pasada`
+                )}
+                .
+              </p>
+            ) : (
+              <p>
+                Aún no hay ventas registradas esta semana. Registra tu primera venta y aquí te
+                cuento cómo va tu negocio.
+              </p>
+            )}
+            {nota.alerta_stock ? (
+              <p>
+                Ojo con la bodega:{' '}
+                <span className="font-semibold">{nota.alerta_stock.nombre}</span> se acaba en
+                unos <span className="font-semibold">{Math.round(nota.alerta_stock.dias_cobertura)} días</span>{' '}
+                <span className="text-gris text-[12px]">(estimación)</span>.
+              </p>
+            ) : (
+              <p>Tu bodega está en buen nivel: nada por agotarse.</p>
+            )}
+          </div>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1 mt-2.5 text-[12px] font-semibold text-ia"
+          >
+            Preguntarle al gerente
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       )}
 
-      <div className="bg-verde rounded-2xl p-6 text-center">
-        <div className="font-display font-extrabold text-2xl text-white mb-1.5 leading-tight tracking-tight">
-          Conoce tu zona
-          <br />
-          antes de invertir
-        </div>
-        <div className="text-[13px] text-white/65 mb-5 leading-relaxed">
-          Analiza competencia, demanda y oportunidades de cualquier zona de Colombia.
-        </div>
-        <Button variant="amber" onClick={() => router.push('/analizar')}>
-          🔍 Iniciar análisis
-        </Button>
-      </div>
-
-      <Link href="/chat">
-        <Card className="flex items-center gap-3 cursor-pointer hover:border-verde-suave transition">
-          <div className="w-11 h-11 rounded-xl bg-verde-claro flex items-center justify-center text-xl flex-shrink-0">
-            💬
+      {/* Ventas de la semana — dato real (tarjeta del prototipo) */}
+      {nota && (
+        <Card className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[13px] text-gris">Ventas de la semana</div>
+            <div className="font-display font-bold text-[24px] text-negro leading-none mt-1">
+              {formatoCOP(nota.kpis?.ingresos_semana ?? 0)}
+            </div>
+            {nota.kpis?.avance_semanal_pct != null && (
+              <div
+                className={`mt-1.5 text-[13px] font-semibold flex items-center gap-1 ${
+                  nota.kpis.avance_semanal_pct >= 0 ? 'text-verde' : 'text-rojo'
+                }`}
+              >
+                {nota.kpis.avance_semanal_pct >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
+                {nota.kpis.avance_semanal_pct >= 0 ? '+' : ''}
+                {formatoNumero(Math.abs(nota.kpis.avance_semanal_pct))}% frente a la semana pasada
+              </div>
+            )}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold text-negro">Pregúntale a tu asistente</div>
-            <div className="text-[11px] text-gris">Tus ventas, inventario y cómo usar la app</div>
-          </div>
-          <span className="text-[11px] text-verde font-medium flex-shrink-0">Abrir →</span>
+          <ChipReal />
         </Card>
-      </Link>
+      )}
 
-      <div className="grid grid-cols-2 gap-2.5">
-        {ACCESOS.map((a) => (
-          <Link key={a.href} href={a.href}>
-            <Card className="text-center cursor-pointer hover:border-verde-suave transition h-full">
-              <div className="text-3xl mb-1.5">{a.emoji}</div>
-              <div className="text-xs font-semibold text-negro mb-0.5">{a.titulo}</div>
-              <div className="text-[11px] text-gris">{a.sub}</div>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {/* ¿Estás ganando plata esta semana? — utilidad real + cifra aproximada */}
+      {nota && (
+        <Card>
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="text-[13px] text-gris">¿Estás ganando plata esta semana?</div>
+            <ChipIA texto="Estimación" />
+          </div>
+          {nota.kpis?.utilidad_semana != null && (
+            <>
+              <div
+                className={`font-display font-bold text-[20px] leading-none ${
+                  nota.kpis.utilidad_semana >= 0 ? 'text-verde' : 'text-rojo'
+                }`}
+              >
+                Te quedan ~{formatoCOP(nota.kpis.utilidad_semana)}
+              </div>
+              <p className="text-[12px] text-gris leading-relaxed mt-1.5">
+                Ventas menos gastos de la semana y el costo de la mercancía. Cifra aproximada:
+                se afina con lo que registres.
+              </p>
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* Tu mejor día — dato real (migración mejor_dia_ventas) */}
+      {nota?.mejor_dia && (
+        <Card className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[13px] text-gris">Tu mejor día</div>
+            <div className="font-display font-bold text-[20px] text-negro mt-0.5">
+              El {capitalizar(nota.mejor_dia.nombre_dia)} 🎯
+            </div>
+            <p className="text-[12px] text-gris leading-relaxed mt-1">
+              {nota.mejor_dia.semanas_con_datos >= 2
+                ? `Casi siempre vendes más los ${nota.mejor_dia.nombre_dia} (promedio de ${nota.mejor_dia.semanas_con_datos} semanas).`
+                : 'Con las ventas que llevas registradas, este es tu día más fuerte.'}
+            </p>
+          </div>
+          <ChipReal />
+        </Card>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-2">

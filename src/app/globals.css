@@ -26,6 +26,9 @@
   --color-rojo-claro: #fee2e2;
   --color-verde-oscuro: #183f30;
   --color-crema: #fbf9f5;
+  --color-ia: #7a5ea8;
+  --color-ia-fondo: #f1edf8;
+  --color-ia-texto: #4b3a6e;
 
   --font-display: var(--font-syne);
   --font-sans: var(--font-inter);

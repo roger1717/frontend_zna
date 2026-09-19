@@ -12,7 +12,7 @@ const ITEMS = [
   { href: '/ventas', label: 'Ventas', Icon: Receipt },
   { href: '/inventario', label: 'Inventario', Icon: Package },
   { href: '/analizar', label: 'Analizar', Icon: Search },
-  { href: '/chat', label: 'Asistente', Icon: MessageCircle },
+  { href: '/chat', label: 'Gerente', Icon: MessageCircle },
   { href: '/perfil', label: 'Perfil', Icon: User },
 ];
 

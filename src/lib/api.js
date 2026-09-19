@@ -220,6 +220,15 @@ export async function obtenerDashboard(token) {
   }
 }
 
+// --- Inicio: nota del Gerente IA (Fase 4) ---
+export async function obtenerNotaInicio(token) {
+  try {
+    return await apiFetch('/api/inicio/nota', { token });
+  } catch {
+    return null;
+  }
+}
+
 export async function listarVentas(token) {
   try {
     const { ventas } = await apiFetch('/api/ventas', { token });
