@@ -36,9 +36,12 @@ export default function PerfilPage() {
   const nombre =
     perfil?.nombre || user?.nombre || user?.user_metadata?.nombre || user?.email?.split('@')[0] || 'Usuario';
   const email = perfil?.email || user?.email;
-  const planId = perfil?.plan || 'prueba';
+  const planId = perfil?.plan || 'free';
   const nombrePlan = NOMBRE_PLAN[planId] || planId;
-  const esPrueba = planId === 'prueba' || planId === 'gratis';
+  const esPrueba = planId === 'prueba' || planId === 'gratis' || planId === 'free';
+  const limiteTokens = perfil?.tokens?.limite || 0;
+  const tokensUsados = perfil?.tokens?.usados || 0;
+  const tokensPorcentaje = limiteTokens > 0 ? Math.round((tokensUsados / limiteTokens) * 100) : 0;
   const porcentajeUso =
     usoAnalisis != null ? Math.min(100, (usoAnalisis / LIMITE_ANALISIS_PRUEBA) * 100) : 0;
 
@@ -73,20 +76,33 @@ export default function PerfilPage() {
         </div>
       </Card>
 
-      <Card className="cursor-pointer hover:border-verde-suave transition" onClick={() => router.push('/planes')}>
-        <div className="flex items-center gap-3">
-          <div className="text-2xl">💳</div>
-          <div className="flex-1">
-            <div className="text-[13px] font-semibold text-negro">Planes y pagos</div>
-            <div className="text-xs text-gris">Plan de prueba activo · pagos próximamente</div>
+        <div className="bg-verde-suave rounded-xl p-3 text-left mb-3">
+          <div className="text-xs font-semibold text-verde-texto mb-1">🚀 Plan {nombrePlan}</div>
+          <div className="text-xs text-verde-texto2 leading-relaxed">
+            {esPrueba
+              ? '1 análisis de zona · hasta 5 productos · 1 servicio · radio 200 m'
+              : '5 análisis mensuales · productos/servicios ilimitados · radio 5000 m · 11000 tokens/mes'}
           </div>
-          <div className="text-gris text-lg">›</div>
         </div>
-      </Card>
+        {esPrueba && (
+          <div className="bg-ambar-suave rounded-xl p-3 text-left">
+            <div className="text-xs font-semibold text-ambar-texto mb-1">📊 Tokens IA (pro)</div>
+            <div className="text-xs text-ambar-texto2">
+              {tokensUsados} / {limiteTokens} tokens ({tokensPorcentaje}% usado)
+            </div>
+          </div>
+        )}
 
-      <Button variant="outline" onClick={manejarLogout}>
-        Cerrar sesión
-      </Button>
+        {esPrueba && (
+          <Button
+            variant="outline"
+            onClick={() => router.push('/planes')}
+            className="w-full mt-2"
+          >
+            Ver planes y pagar
+          </Button>
+        )}
     </>
   );
 }
+

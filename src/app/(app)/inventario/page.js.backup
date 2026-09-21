@@ -42,19 +42,15 @@ export default function CatalogoPage() {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const [filtro, setFiltro] = useState('');
 
   const [form, setForm] = useState(FORM_VACIO);
   const [editandoId, setEditandoId] = useState(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [filtro, setFiltro] = useState();
 
   const [auditoria, setAuditoria] = useState(null);
   const [auditando, setAuditando] = useState(false);
-
-  const productosFiltrados = productos.filter((p) => 
-    p.nombre.toLowerCase().includes(filtro.toLowerCase())
-  );
 
   useEffect(() => {
     if (tab === 'productos') cargar();
@@ -72,6 +68,10 @@ export default function CatalogoPage() {
       setCargando(false);
     }
   }
+
+  const productosFiltrados = productos.filter((p) => 
+    p.nombre.toLowerCase().includes(filtro.toLowerCase())
+  );
 
   function abrirCrear() {
     setForm(FORM_VACIO);
@@ -104,34 +104,45 @@ export default function CatalogoPage() {
   }
 
   async function guardar() {
+    if (!form.nombre.trim()) {
+      setError('El nombre es obligatorio.');
+      return;
+    }
+    const payload = {
+      nombre: form.nombre.trim(),
+      stock_actual: Number(form.stock_actual) || 0,
+      stock_minimo: Number(form.stock_minimo) || 0,
+      precio: Number(form.precio) || 0,
+      costo: Number(form.costo) || 0,
+    };
+
     setGuardando(true);
     setError('');
     try {
       if (editandoId) {
-        await editarProducto(editandoId, form, token);
+        await editarProducto(editandoId, payload, token);
       } else {
-        await crearProducto(form, token);
+        await crearProducto(payload, token);
       }
       cerrarForm();
+      setAuditoria(null);
       await cargar();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('No se pudo guardar el producto.');
-      }
+      setError(err instanceof ApiError ? err.message : 'No se pudo guardar el producto.');
     } finally {
       setGuardando(false);
     }
   }
 
   async function eliminar(p) {
-    if (!confirm(`¿Borrar ${p.nombre}?`)) return;
+    if (!confirm(`¿Borrar "${p.nombre}"?`)) return;
+    setError('');
     try {
       await borrarProducto(p.id, token);
+      setAuditoria(null);
       await cargar();
-    } catch {
-      setError('No se pudo borrar el producto.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo borrar el producto.');
     }
   }
 
@@ -140,13 +151,9 @@ export default function CatalogoPage() {
     setError('');
     try {
       const r = await auditarInventario(token);
-      setAuditoria(r.auditoria || null);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('No se pudo generar la auditoría.');
-      }
+      setAuditoria(r);
+    } catch {
+      setError('No se pudo generar la auditoría. Intenta de nuevo.');
     } finally {
       setAuditando(false);
     }
@@ -159,13 +166,14 @@ export default function CatalogoPage() {
         <div className="text-[13px] text-gris leading-relaxed">Todo lo que vendes: productos con stock y servicios.</div>
       </div>
 
-      <div className="flex bg-white rounded-xl p-0.5 gap-0.5 border border-borde mb-4">
+      {/* Pestañas — mismo estilo visual que las tabs de InformeDetallado.jsx */}
+      <div className="flex bg-white rounded-xl p-0.5 gap-0.5 border border-borde">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 py-2 px-1 text-center text-[12px] font-medium rounded-[9px] transition ${
-              tab === t.id ? 'bg-verde text-white' : 'text-gris hover:bg-borde'
+              tab === t.id ? 'bg-verde text-white font-semibold' : 'text-gris'
             }`}
           >
             {t.etiqueta}
@@ -173,44 +181,86 @@ export default function CatalogoPage() {
         ))}
       </div>
 
+      {tab === 'servicios' && <CatalogoServicios />}
+
       {tab === 'productos' && (
         <>
-          {error && (
-            <Alert tone="rojo" className="mb-4">
-              {error}
-            </Alert>
-          )}
-
-          <div className="mb-4 flex gap-2">
-            <Input
-              label="Buscar"
-              placeholder="Nombre del producto"
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-            />
-            <Button variant="dark" loading={auditando} onClick={pedirAuditoria} size="sm" className="self-end">
-              <Sparkles className="h-4 w-4" /> Auditoría IA
-            </Button>
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-[13px] text-gris leading-relaxed">Administra tus productos y pide una auditoría con IA.</div>
+            {!mostrarForm && (
+              <Button fullWidth={false} size="sm" className="px-3 flex-shrink-0" onClick={abrirCrear}>
+                <Plus className="h-4 w-4" /> Nuevo
+              </Button>
+            )}
           </div>
 
+          {error && <Alert tone="error">{error}</Alert>}
+
           {mostrarForm && (
-            <Card className="mb-4">
-              <div className="mb-3">
-                <div className="font-semibold text-negro">{editandoId ? 'Editar producto' : 'Nuevo producto'}</div>
-                <div className="text-[13px] text-gris">Completa los campos para guardar.</div>
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[13px] font-semibold text-negro">
+                  {editandoId ? 'Editar producto' : 'Nuevo producto'}
+                </span>
+                <button onClick={cerrarForm} className="text-gris" aria-label="Cerrar">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input label="Nombre" placeholder="Ej: Arroz 1kg" value={form.nombre} onChange={(e) => actualizarCampo('nombre', e.target.value)} />
-                <Input label="Stock actual" type="number" min="0" placeholder="0" value={form.stock_actual} onChange={(e) => actualizarCampo('stock_actual', e.target.value)} />
-                <Input label="Stock mínimo" type="number" min="0" placeholder="0" value={form.stock_minimo} onChange={(e) => actualizarCampo('stock_minimo', e.target.value)} />
-                <Input label="Precio de venta" type="number" inputMode="decimal" min="0" placeholder="0" value={form.precio} onChange={(e) => actualizarCampo('precio', e.target.value)} />
-                <Input label="Costo" type="number" inputMode="decimal" min="0" placeholder="0" value={form.costo} onChange={(e) => actualizarCampo('costo', e.target.value)} />
-              </div>
-
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" onClick={cerrarForm}>Cancelar</Button>
-                <Button loading={guardando} onClick={guardar}>{editandoId ? 'Guardar cambios' : 'Agregar producto'}</Button>
+              <div className="flex flex-col gap-3">
+                <Input
+                  label="Nombre"
+                  placeholder="Ej. Arepa de maíz"
+                  value={form.nombre}
+                  onChange={(e) => actualizarCampo('nombre', e.target.value)}
+                  autoFocus
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Stock actual"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    placeholder="0"
+                    value={form.stock_actual}
+                    onChange={(e) => actualizarCampo('stock_actual', e.target.value)}
+                  />
+                  <Input
+                    label="Stock mínimo"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    placeholder="0"
+                    value={form.stock_minimo}
+                    onChange={(e) => actualizarCampo('stock_minimo', e.target.value)}
+                  />
+                  <Input
+                    label="Precio de venta"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    placeholder="0"
+                    value={form.precio}
+                    onChange={(e) => actualizarCampo('precio', e.target.value)}
+                  />
+                  <Input
+                    label="Costo"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    placeholder="0"
+                    value={form.costo}
+                    onChange={(e) => actualizarCampo('costo', e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={cerrarForm}>
+                    Cancelar
+                  </Button>
+                  <Button loading={guardando} onClick={guardar}>
+                    {editandoId ? 'Guardar cambios' : 'Agregar producto'}
+                  </Button>
+                </div>
               </div>
             </Card>
           )}
@@ -222,6 +272,14 @@ export default function CatalogoPage() {
           )}
 
           {!cargando && productosFiltrados.length === 0 && !mostrarForm && (
+            <div className="mb-4">
+              <Input
+                label="Buscar producto"
+                placeholder="Escribe el nombre del producto..."
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+              />
+            </div>
             <EmptyState
               emoji="📦"
               titulo="Tu inventario está vacío"
@@ -234,6 +292,12 @@ export default function CatalogoPage() {
           )}
 
           {!cargando && productosFiltrados.length > 0 && (
+            <div className="mb-4 flex gap-2">
+              <Input label="Buscar" placeholder="Nombre del producto" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+              <Button variant="dark" loading={auditando} onClick={pedirAuditoria} size="sm" className="self-end">
+                <Sparkles className="h-4 w-4" /> Auditoría IA
+              </Button>
+            </div>
             <div className="flex flex-col gap-2">
               {productosFiltrados.map((p) => {
                 const estado = estadoStock(p);
@@ -269,6 +333,7 @@ export default function CatalogoPage() {
               <AuditoriaIA auditoria={auditoria} />
             </div>
           )}
+
         </>
       )}
     </>

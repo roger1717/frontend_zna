@@ -209,13 +209,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="bg-ambar-suave rounded-2xl p-3.5 border-l-4 border-ambar">
-        <div className="text-xs font-semibold text-ambar-texto mb-1">🎉 Beta disponible — 13 sectores</div>
-        <div className="text-xs text-ambar-texto2 leading-relaxed">
-          Tiendas, restaurantes, farmacias, belleza, tecnología, veterinarias y más. Tu retroalimentación mejora la
-          app, {user?.nombre || user?.email?.split('@')[0]}.
-        </div>
-      </div>
     </>
   );
 }
