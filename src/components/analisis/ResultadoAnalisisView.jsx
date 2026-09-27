@@ -29,11 +29,11 @@ function radioTexto(metros) {
 
 // Barras del PDF (Nivel de Competencia, Densidad, Estrato, Demanda, Score).
 const BARRAS = [
-  { clave: 'score', etiqueta: 'Score de oportunidad', color: '#1d4e3a' },
-  { clave: 'competencia', etiqueta: 'Nivel de competencia (más alto = menos saturado)', color: '#378add' },
-  { clave: 'densidad', etiqueta: 'Densidad comercial', color: '#e8923a' },
-  { clave: 'estrato', etiqueta: 'Estrato (nivel socioeconómico)', color: '#4ecdc4' },
-  { clave: 'demanda', etiqueta: 'Demanda estimada', color: '#2a6b50' },
+  { clave: 'score', etiqueta: 'Score de oportunidad', descripcion: 'Calificación general de qué tan buena es esta zona para tu negocio (0-100)', color: '#1d4e3a' },
+  { clave: 'competencia', etiqueta: 'Nivel de competencia', descripcion: 'Qué tan saturado está el mercado (más alto = menos competidores en la zona)', color: '#378add' },
+  { clave: 'densidad', etiqueta: 'Densidad comercial', descripcion: 'Cantidad de negocios y actividad comercial en el área analizada', color: '#e8923a' },
+  { clave: 'estrato', etiqueta: 'Estrato', descripcion: 'Nivel socioeconómico estimado de las personas que viven en esta zona', color: '#4ecdc4' },
+  { clave: 'demanda', etiqueta: 'Demanda estimada', descripcion: 'Probabilidad de que las personas de esta zona necesiten este tipo de servicio', color: '#2a6b50' },
 ];
 
 export default function ResultadoAnalisisView({ analisis, contexto }) {
@@ -85,6 +85,7 @@ export default function ResultadoAnalisisView({ analisis, contexto }) {
           <BarraProgreso
             key={b.clave}
             etiqueta={b.etiqueta}
+            descripcion={b.descripcion}
             valor={Number.isFinite(valores[b.clave]) ? valores[b.clave] : 0}
             color={b.color}
           />

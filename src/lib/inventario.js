@@ -18,7 +18,7 @@ export function estadoStock(producto) {
     }
   
     if (stock <= min) {
-      return { clave: 'stock_bajo', texto: 'Stock bajo', tone: 'warning' };
+      return { clave: 'stock_bajo', texto: 'Stock bajo', tone: 'error' };
     }
   
     return { clave: 'en_stock', texto: 'En stock', tone: 'success' };

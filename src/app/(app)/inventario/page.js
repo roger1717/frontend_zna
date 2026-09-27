@@ -181,16 +181,23 @@ export default function CatalogoPage() {
             </Alert>
           )}
 
-          <div className="mb-4 flex gap-2">
+          <div className="mb-4">
+            <Button variant="dark" loading={auditando} onClick={pedirAuditoria} size="sm">
+              <Sparkles className="h-4 w-4" /> Auditoría IA
+            </Button>
+          </div>
+          <div className="mb-4">
+            <Button variant="outline" onClick={abrirCrear} size="sm">
+              <Plus className="h-4 w-4" /> Agregar producto
+            </Button>
+          </div>
+          <div className="mb-4">
             <Input
               label="Buscar"
               placeholder="Nombre del producto"
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
             />
-            <Button variant="dark" loading={auditando} onClick={pedirAuditoria} size="sm" className="self-end">
-              <Sparkles className="h-4 w-4" /> Auditoría IA
-            </Button>
           </div>
 
           {mostrarForm && (
@@ -271,6 +278,10 @@ export default function CatalogoPage() {
           )}
         </>
       )}
+      {tab === 'servicios' && (
+        <CatalogoServicios />
+      )}
     </>
-  );
-}
+      );
+    }
+

@@ -1,7 +1,7 @@
 /* frontend/src/components/ui/BarraProgreso.jsx */
 const COLOR_POR_DEFECTO = '#1D4E3A';
 
-export default function BarraProgreso({ etiqueta, valor, maximo = 100, color = COLOR_POR_DEFECTO, sufijo = '' }) {
+export default function BarraProgreso({ etiqueta, descripcion, valor, maximo = 100, color = COLOR_POR_DEFECTO, sufijo = '' }) {
   const porcentaje = Math.min(100, Math.max(0, (valor / maximo) * 100));
   return (
     <div className="mb-2.5 last:mb-0">
@@ -12,6 +12,11 @@ export default function BarraProgreso({ etiqueta, valor, maximo = 100, color = C
           {sufijo}
         </span>
       </div>
+      {descripcion && (
+        <div className="text-[10px] text-gris mb-1 leading-relaxed">
+          {descripcion}
+        </div>
+      )}
       <div className="h-2 bg-borde rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"

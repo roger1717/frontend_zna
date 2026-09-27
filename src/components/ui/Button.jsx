@@ -9,6 +9,7 @@ const VARIANTES = {
   amber: 'bg-ambar text-ambar-texto hover:opacity-90',
   outline: 'bg-transparent text-verde border-[1.5px] border-verde hover:bg-verde-claro',
   ghost: 'bg-transparent text-gris hover:bg-white',
+  solid: 'bg-verde text-white hover:opacity-90',
 };
 
 export default function Button({

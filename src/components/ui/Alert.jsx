@@ -8,7 +8,7 @@ const TONOS = {
 };
 
 export default function Alert({ tone = 'info', children, className = '' }) {
-  const { wrap, icon, Icon } = TONOS[tone];
+  const { wrap, icon, Icon } = TONOS[tone] || TONOS.info;
   return (
     <div className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-[13px] leading-relaxed ${wrap} ${className}`}>
       <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${icon}`} />
@@ -16,3 +16,4 @@ export default function Alert({ tone = 'info', children, className = '' }) {
     </div>
   );
 }
+

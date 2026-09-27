@@ -109,7 +109,7 @@ export default function CatalogoServicios() {
     <>
       <div className="flex items-start justify-between gap-2">
         <div className="text-[13px] text-gris leading-relaxed">
-          Corte, diagnóstico, cambio de aceite — cualquier cosa que vendas sin descontar stock.
+          Agrega tus Servicios
         </div>
         {!mostrarForm && (
           <Button fullWidth={false} size="sm" className="px-3 flex-shrink-0" onClick={abrirCrear}>

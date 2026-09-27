@@ -11,12 +11,16 @@ import { enviarMensajeChatbot, ApiError } from '@/lib/api';
 // (solo lectura de sus datos + ayuda de uso). Coinciden con las intenciones que
 // el backend clasifica en la Fase 4.4.
 const SUGERENCIAS = [
-  '¿Cómo va mi negocio?',
+  // Preguntas sobre productos y servicios
+  '¿Qué productos debería agregar?',
+  '¿Cuánto comprar de mis productos?',
+  '¿Qué promoción debo hacer?',
+  '¿Qué servicios puedo ofrecer?',
+  // Preguntas sobre datos del negocio (no consumen tokens de IA)
   '¿Quién me debe plata?',
-  '¿Qué se me está agotando?',
-  '¿Qué debería comprar?',
+  '¿Qué productos se me agotan?',
   '¿Cuál es mi producto más vendido?',
-  '¿Cómo registro una venta?',
+  '¿Cómo mejoro mis ventas?',
 ];
 
 // Cómo se muestra el origen de cada respuesta (regla de honestidad: el usuario

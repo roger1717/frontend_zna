@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { obtenerHistorial, obtenerPerfil } from '@/lib/api';
+import { obtenerHistorial, obtenerPerfil, actualizarPerfil } from '@/lib/api';
 import { LIMITE_ANALISIS_PRUEBA } from '@/lib/constants';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -19,14 +19,31 @@ export default function PerfilPage() {
   const router = useRouter();
   const [usoAnalisis, setUsoAnalisis] = useState(null);
   const [perfil, setPerfil] = useState(null);
+  const [perfilNegocio, setPerfilNegocio] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    obtenerPerfil(token).then((datos) => setPerfil(datos.perfil));
+    obtenerPerfil(token).then((datos) => {
+      setPerfil(datos.perfil);
+      if (datos.perfil?.perfil_negocio) setPerfilNegocio(datos.perfil.perfil_negocio);
+    });
 
     obtenerHistorial({ pagina: 1, porPagina: 50 }, token).then((datos) => {
       setUsoAnalisis((datos.items || []).length);
     });
   }, [token]);
+
+  async function guardarPerfil() {
+    setGuardando(true);
+    try {
+      await actualizarPerfil({ perfil_negocio: perfilNegocio }, token);
+      alert('Perfil de negocio guardado correctamente.');
+    } catch (e) {
+      alert('Error al guardar: ' + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function manejarLogout() {
     await logout();
@@ -39,6 +56,7 @@ export default function PerfilPage() {
   const planId = perfil?.plan || 'free';
   const nombrePlan = NOMBRE_PLAN[planId] || planId;
   const esPrueba = planId === 'prueba' || planId === 'gratis' || planId === 'free';
+  const esAdmin = planId === 'admin';
   const limiteTokens = perfil?.tokens?.limite || 0;
   const tokensUsados = perfil?.tokens?.usados || 0;
   const tokensPorcentaje = limiteTokens > 0 ? Math.round((tokensUsados / limiteTokens) * 100) : 0;
@@ -76,33 +94,68 @@ export default function PerfilPage() {
         </div>
       </Card>
 
-        <div className="bg-verde-suave rounded-xl p-3 text-left mb-3">
-          <div className="text-xs font-semibold text-verde-texto mb-1">🚀 Plan {nombrePlan}</div>
-          <div className="text-xs text-verde-texto2 leading-relaxed">
-            {esPrueba
-              ? '1 análisis de zona · hasta 5 productos · 1 servicio · radio 200 m'
-              : '5 análisis mensuales · productos/servicios ilimitados · radio 5000 m · 11000 tokens/mes'}
+      <div className="bg-verde-suave rounded-xl p-3 text-left mb-3">
+        <div className="text-xs font-semibold text-verde-texto mb-1">🚀 Plan {nombrePlan}</div>
+        <div className="text-xs text-verde-texto2 leading-relaxed">
+          {esPrueba
+            ? '1 análisis de zona · hasta 5 productos · 1 servicio · radio 200 m'
+            : '5 análisis mensuales · productos/servicios ilimitados · radio 5000 m · 11000 tokens/mes'}
+        </div>
+      </div>
+
+      {esPrueba && (
+        <div className="bg-ambar-suave rounded-xl p-3 text-left">
+          <div className="text-xs font-semibold text-ambar-texto mb-1">📊 Tokens IA (pro)</div>
+          <div className="text-xs text-ambar-texto2">
+            {tokensUsados} / {limiteTokens} tokens ({tokensPorcentaje}% usado)
           </div>
         </div>
-        {esPrueba && (
-          <div className="bg-ambar-suave rounded-xl p-3 text-left">
-            <div className="text-xs font-semibold text-ambar-texto mb-1">📊 Tokens IA (pro)</div>
-            <div className="text-xs text-ambar-texto2">
-              {tokensUsados} / {limiteTokens} tokens ({tokensPorcentaje}% usado)
-            </div>
-          </div>
-        )}
+      )}
 
-        {esPrueba && (
-          <Button
-            variant="outline"
-            onClick={() => router.push('/planes')}
-            className="w-full mt-2"
-          >
-            Ver planes y pagar
-          </Button>
-        )}
+      {esPrueba && (
+        <Button
+          variant="outline"
+          onClick={() => router.push('/planes')}
+          className="w-full mt-2"
+        >
+          Ver planes y pagar
+        </Button>
+      )}
+
+      <div className="mb-4">
+        <div className="text-[13px] font-semibold text-negro mb-2">🛠️ Sobre tu negocio</div>
+        <textarea
+          rows="4"
+          className="w-full border border-borde rounded-lg p-3 text-[14px] mb-2 focus:outline-none focus:ring-2 focus:ring-verde"
+          placeholder="Ej: Vendo ropa deportiva en el centro de Bogotá. Busco aumentar ventas de verano."
+          value={perfilNegocio}
+          onChange={(e) => setPerfilNegocio(e.target.value)}
+          maxLength="500"
+        />
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs text-gris">Máximo 500 caracteres</span>
+          <span className="text-xs text-gris">{perfilNegocio.length}/500</span>
+        </div>
+        <Button
+          variant="primary"
+          onClick={guardarPerfil}
+          disabled={guardando}
+          className="w-full"
+        >
+          {guardando ? 'Guardando...' : 'Guardar Perfil de Negocio'}
+        </Button>
+      </div>
+
+      <Button variant="outline" onClick={manejarLogout} className="w-full mt-4">
+        Cerrar sesión
+      </Button>
+
+      {esAdmin && (
+        <div className="mt-3 text-center">
+          <div className="text-xs font-semibold text-verde">🔧 Administrador</div>
+          <div className="text-xs text-gris">Tokens ilimitados</div>
+        </div>
+      )}
     </>
   );
 }
-
