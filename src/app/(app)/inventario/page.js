@@ -104,6 +104,16 @@ export default function CatalogoPage() {
   }
 
   async function guardar() {
+    const precioNumero = Number(form.precio);
+    const costoNumero = Number(form.costo || 0);
+    if (!Number.isFinite(precioNumero) || !Number.isFinite(costoNumero)) {
+      setError('El precio y el costo deben ser números válidos.');
+      return;
+    }
+    if (costoNumero > precioNumero) {
+      setError('El costo no puede ser mayor que el precio de venta.');
+      return;
+    }
     setGuardando(true);
     setError('');
     try {

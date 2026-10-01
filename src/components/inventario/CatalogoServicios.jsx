@@ -71,10 +71,16 @@ export default function CatalogoServicios() {
       setError('El nombre es obligatorio.');
       return;
     }
+    const precio = Number(form.precio) || 0;
+    const costo = Number(form.costo) || 0;
+    if (costo > precio) {
+      setError('El costo no puede ser mayor que el precio de venta.');
+      return;
+    }
     const payload = {
       nombre: form.nombre.trim(),
-      precio: Number(form.precio) || 0,
-      costo: Number(form.costo) || 0,
+      precio,
+      costo,
     };
 
     setGuardando(true);

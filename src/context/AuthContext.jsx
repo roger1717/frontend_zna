@@ -2,7 +2,7 @@
 
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, supabaseConfigurado } from '@/lib/supabaseClient';
 import { EVENTO_SESION_VENCIDA, validarSesion } from '@/lib/api';
 
@@ -11,6 +11,8 @@ const AuthContext = createContext(null);
 // Tope para recuperar la sesión al arrancar. Si Supabase no responde en este
 // tiempo, la app entra como anónimo en vez de quedarse cargando.
 const TIEMPO_LIMITE_MS = 8000;
+const TIEMPO_INACTIVIDAD_MS = 5 * 60 * 1000;
+const GRACIA_SIN_RED_MS = 30 * 1000;
 
 // La app NO tiene modo demo: nadie entra con una sesión local de mentira. El
 // usuario entra únicamente con una cuenta real (Supabase Auth) y cada token lo
@@ -20,6 +22,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const ultimaActividad = useRef(Date.now());
+  const temporizadorInactividad = useRef(null);
+  const temporizadorSinRed = useRef(null);
+
+  const cerrarSesionLocal = useCallback(async () => {
+    if (temporizadorInactividad.current) clearTimeout(temporizadorInactividad.current);
+    if (temporizadorSinRed.current) clearTimeout(temporizadorSinRed.current);
+    await supabase?.auth.signOut({ scope: 'local' }).catch(() => {});
+    setUser(null);
+    setToken(null);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!supabaseConfigurado) {
@@ -89,6 +103,64 @@ export function AuthProvider({ children }) {
       suscripcion.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const programarInactividad = () => {
+      if (temporizadorInactividad.current) clearTimeout(temporizadorInactividad.current);
+      temporizadorInactividad.current = setTimeout(() => {
+        if (Date.now() - ultimaActividad.current >= TIEMPO_INACTIVIDAD_MS) {
+          cerrarSesionLocal();
+        } else {
+          programarInactividad();
+        }
+      }, TIEMPO_INACTIVIDAD_MS);
+    };
+
+    const registrarActividad = () => {
+      ultimaActividad.current = Date.now();
+      programarInactividad();
+    };
+
+    const comprobarRegreso = () => {
+      if (Date.now() - ultimaActividad.current >= TIEMPO_INACTIVIDAD_MS) {
+        cerrarSesionLocal();
+      } else {
+        registrarActividad();
+      }
+    };
+
+    const eventos = ['mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    eventos.forEach((evento) => window.addEventListener(evento, registrarActividad, { passive: true }));
+    document.addEventListener('visibilitychange', comprobarRegreso);
+
+    const manejarRed = () => {
+      if (!navigator.onLine) {
+        if (temporizadorSinRed.current) clearTimeout(temporizadorSinRed.current);
+        temporizadorSinRed.current = setTimeout(() => {
+          if (!navigator.onLine) cerrarSesionLocal();
+        }, GRACIA_SIN_RED_MS);
+      } else if (temporizadorSinRed.current) {
+        clearTimeout(temporizadorSinRed.current);
+        temporizadorSinRed.current = null;
+      }
+    };
+
+    window.addEventListener('offline', manejarRed);
+    window.addEventListener('online', manejarRed);
+    ultimaActividad.current = Date.now();
+    programarInactividad();
+
+    return () => {
+      eventos.forEach((evento) => window.removeEventListener(evento, registrarActividad));
+      document.removeEventListener('visibilitychange', comprobarRegreso);
+      window.removeEventListener('offline', manejarRed);
+      window.removeEventListener('online', manejarRed);
+      if (temporizadorInactividad.current) clearTimeout(temporizadorInactividad.current);
+      if (temporizadorSinRed.current) clearTimeout(temporizadorSinRed.current);
+    };
+  }, [user, cerrarSesionLocal]);
 
   // Si el backend responde 401 con Supabase configurado, el token ya no sirve
   // (venció, o la base se reinició). Se limpia la sesión y el layout de (app)
@@ -172,12 +244,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    if (supabaseConfigurado) {
-      await supabase.auth.signOut();
-    }
-    setUser(null);
-    setToken(null);
-  }, []);
+    await cerrarSesionLocal();
+  }, [cerrarSesionLocal]);
 
   return (
     <AuthContext.Provider
